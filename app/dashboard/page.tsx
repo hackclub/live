@@ -14,6 +14,7 @@ import { getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "..
 import SubmissionForm from "../components/dashboard/SubmissionForm";
 import SubmissionsList, { type OwnSubmission } from "../components/dashboard/SubmissionsList";
 import PurchasedPrizes, { type Redemption } from "../components/dashboard/PurchasedPrizes";
+import { parseStoredWorkLog } from "../../src/lib/submission";
 
 export default async function DashboardPage() {
   // Redirects to /api/auth/login or /api/auth/hackatime/login if either
@@ -52,12 +53,14 @@ export default async function DashboardPage() {
 
   const submissions: OwnSubmission[] = ownRecords.map((record) => {
       const hackatimeProjectName = String(record.fields[SUBMISSION_FIELDS.hackatimeProjects] ?? "");
+      const workLog = parseStoredWorkLog(record.fields[SUBMISSION_FIELDS.lapseLinks]);
       return {
         id: record.id,
         track: hackatimeProjectName ? "software" : "hardware",
         codeUrl: String(record.fields[SUBMISSION_FIELDS.codeUrl] ?? ""),
         playableUrl: String(record.fields[SUBMISSION_FIELDS.playableUrl] ?? ""),
-        lapseLinks: String(record.fields[SUBMISSION_FIELDS.lapseLinks] ?? ""),
+        lapseLinks: workLog.link,
+        workLogType: workLog.type,
         hours: Number(record.fields[SUBMISSION_FIELDS.overrideHours] ?? 0),
         approved: Boolean(record.fields[SUBMISSION_FIELDS.approved]),
         reviewStatus: String(record.fields[SUBMISSION_FIELDS.reviewStatus] ?? "Pending"),
@@ -100,7 +103,7 @@ export default async function DashboardPage() {
             <p>You have {personalHours.toFixed(1)} tokens. lock in to earn some</p>  
             </> : 
             <div className="font-2 flex flex-row items-center gap-2">
-              <p>You have {personalHours.toFixed(1)} tokens. let's go </p>
+              <p>You have {personalHours.toFixed(1)} tokens. let&apos;s go </p>
               <Link className="link text-blue-500" href="/redeem">spend em!</Link>
             </div>
             

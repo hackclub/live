@@ -3,6 +3,7 @@
 import { useState } from "react";
 import SubmissionForm from "./SubmissionForm";
 import MessageThread, { type ThreadMessage } from "./MessageThread";
+import type { WorkLogType } from "../../../src/lib/submission";
 
 export type OwnSubmission = {
   id: string;
@@ -10,6 +11,7 @@ export type OwnSubmission = {
   codeUrl: string;
   playableUrl: string;
   lapseLinks: string;
+  workLogType: WorkLogType;
   hours: number;
   approved: boolean;
   reviewStatus: string;
@@ -61,7 +63,7 @@ export default function SubmissionsList({
               <a className="btn btn-secondary btn-ghost font-2 btn-sm w-fit" href={s.playableUrl} target="_blank" rel="noreferrer">
                 Playable URL
               </a>
-              {s.lapseLinks && <a className="font-2">Lapse: {s.lapseLinks}</a>}
+              {s.lapseLinks && <a className="font-2">{s.workLogType}: {s.lapseLinks}</a>}
               
          
 
@@ -88,6 +90,7 @@ export default function SubmissionsList({
                   codeUrl: s.codeUrl,
                   playableUrl: s.playableUrl,
                   lapseLinks: s.lapseLinks,
+                  workLogType: s.workLogType,
                   ...s.defaults,
                 }}
                 onSaved={() => setEditing(null)}
