@@ -46,7 +46,27 @@ test("Git Journal selection produces Git Journal form copy", () => {
   });
 });
 
-test("software submissions clear a previously stored work-log type", () => {
-  assert.equal(submission.workLogTypeForAirtable("hardware", "Git Journal"), "Git Journal");
-  assert.equal(submission.workLogTypeForAirtable("software", "Git Journal"), null);
+test("work logs store their type and link in the existing Airtable field", () => {
+  assert.equal(
+    submission.workLogForAirtable("hardware", "Git Journal", "https://example.com/journal"),
+    "Git Journal: https://example.com/journal",
+  );
+  assert.deepEqual(submission.parseStoredWorkLog("Git Journal: https://example.com/journal"), {
+    type: "Git Journal",
+    link: "https://example.com/journal",
+  });
+});
+
+test("legacy untagged work logs remain Lapse links", () => {
+  assert.deepEqual(submission.parseStoredWorkLog("https://example.com/lapse"), {
+    type: "Lapse",
+    link: "https://example.com/lapse",
+  });
+});
+
+test("software submissions clear a previously stored work log", () => {
+  assert.equal(
+    submission.workLogForAirtable("software", "Git Journal", "https://example.com/journal"),
+    null,
+  );
 });

@@ -4,7 +4,7 @@ import { isAdminEmail } from "../../src/lib/admin";
 import { getIdentity } from "../../src/lib/hackclub";
 import { listMessagesBySubmissionIds, listSubmissions, SUBMISSION_FIELDS } from "../../src/lib/airtable";
 import AdminQueue, { type AdminSubmissionRow } from "../components/admin/AdminQueue";
-import { parseWorkLogType, WORK_LOG_TYPE_FIELD, WORK_LOG_TYPES } from "../../src/lib/submission";
+import { parseStoredWorkLog } from "../../src/lib/submission";
 
 const TELESCREEN_BASE = "https://joe-cool.jollyy.dev/billy/overview";
 
@@ -16,7 +16,6 @@ const QUEUE_FIELDS = [
   SUBMISSION_FIELDS.codeUrl,
   SUBMISSION_FIELDS.playableUrl,
   SUBMISSION_FIELDS.lapseLinks,
-  WORK_LOG_TYPE_FIELD,
   SUBMISSION_FIELDS.screenshot,
   SUBMISSION_FIELDS.approved,
   SUBMISSION_FIELDS.reviewStatus,
@@ -53,14 +52,14 @@ export default async function AdminPage({
     const screenshot = record.fields[SUBMISSION_FIELDS.screenshot] as
       | Array<{ url: string }>
       | undefined;
+    const workLog = parseStoredWorkLog(record.fields[SUBMISSION_FIELDS.lapseLinks]);
     return {
       id: record.id,
       telescreenLink: `${TELESCREEN_BASE}?u=${encodeURIComponent(hackatimeId)}`,
       codeUrl: String(record.fields[SUBMISSION_FIELDS.codeUrl] ?? ""),
       playableUrl: String(record.fields[SUBMISSION_FIELDS.playableUrl] ?? ""),
-      lapseLinks: String(record.fields[SUBMISSION_FIELDS.lapseLinks] ?? ""),
-      workLogType:
-        parseWorkLogType(record.fields[WORK_LOG_TYPE_FIELD]) ?? WORK_LOG_TYPES.lapse,
+      lapseLinks: workLog.link,
+      workLogType: workLog.type,
       screenshotUrl: screenshot?.[0]?.url ?? null,
       approved: Boolean(record.fields[SUBMISSION_FIELDS.approved]),
       reviewStatus: String(record.fields[SUBMISSION_FIELDS.reviewStatus] ?? "Pending"),

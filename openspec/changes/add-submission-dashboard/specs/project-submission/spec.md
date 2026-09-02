@@ -59,7 +59,7 @@ The system SHALL let an authenticated user see every submission record whose `Em
 - **THEN** the system displays all of that user's submission records, each with its own status
 
 ### Requirement: Submission track determines whether a Hackatime project is required
-The system SHALL let the submitter choose a Software or Hardware track. For Software, a Hackatime project selection is required and hours are computed server-side from Hackatime. For Hardware, a Hackatime project is not required; instead the submitter chooses Lapse or Git Journal, provides the matching link and a self-reported hours value, and the system writes the choice to `Justification - Work Log Type` and the hours to `Optional - Override Hours Spent`.
+The system SHALL let the submitter choose a Software or Hardware track. For Software, a Hackatime project selection is required and hours are computed server-side from Hackatime. For Hardware, a Hackatime project is not required; instead the submitter chooses Lapse or Git Journal, provides the matching link and a self-reported hours value, and the system writes the labeled link to `Justification - Lapse Links, comma-separated` and the hours to `Optional - Override Hours Spent`.
 
 #### Scenario: Software track without a selected project
 - **WHEN** a Software-track submission does not include a valid Hackatime project selection

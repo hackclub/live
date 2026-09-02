@@ -16,8 +16,7 @@ import { getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "..
 import {
   parseWorkLogType,
   validateSubmissionInput,
-  WORK_LOG_TYPE_FIELD,
-  workLogTypeForAirtable,
+  workLogForAirtable,
   type SubmissionInput,
 } from "../../../src/lib/submission";
 
@@ -131,8 +130,7 @@ export async function POST(request: Request) {
     [SUBMISSION_FIELDS.codeUrl]: input.codeUrl,
     [SUBMISSION_FIELDS.playableUrl]: input.playableUrl,
     [SUBMISSION_FIELDS.description]: input.description,
-    [SUBMISSION_FIELDS.lapseLinks]: input.lapseLinks || undefined,
-    [WORK_LOG_TYPE_FIELD]: workLogTypeForAirtable(track, input.workLogType),
+    [SUBMISSION_FIELDS.lapseLinks]: workLogForAirtable(track, input.workLogType, input.lapseLinks),
     [SUBMISSION_FIELDS.firstName]: identity.first_name ?? "",
     [SUBMISSION_FIELDS.lastName]: identity.last_name ?? "",
     [SUBMISSION_FIELDS.email]: identity.primary_email,

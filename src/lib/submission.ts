@@ -7,8 +7,6 @@ export const WORK_LOG_TYPES = {
   gitJournal: "Git Journal",
 } as const;
 
-export const WORK_LOG_TYPE_FIELD = "Justification - Work Log Type";
-
 export type WorkLogType = (typeof WORK_LOG_TYPES)[keyof typeof WORK_LOG_TYPES];
 
 export function parseWorkLogType(value: unknown): WorkLogType | null {
@@ -29,11 +27,26 @@ export function getWorkLogCopy(type: WorkLogType): { label: string; placeholder:
   };
 }
 
-export function workLogTypeForAirtable(
+export function parseStoredWorkLog(value: unknown): { type: WorkLogType; link: string } {
+  const stored = typeof value === "string" ? value.trim() : "";
+
+  for (const type of Object.values(WORK_LOG_TYPES)) {
+    const prefix = `${type}:`;
+    if (stored.startsWith(prefix)) {
+      return { type, link: stored.slice(prefix.length).trim() };
+    }
+  }
+
+  return { type: WORK_LOG_TYPES.lapse, link: stored };
+}
+
+export function workLogForAirtable(
   track: SubmissionTrack,
   type: WorkLogType | undefined,
-): WorkLogType | null {
-  return track === "hardware" ? type ?? null : null;
+  link: string | undefined,
+): string | null {
+  if (track !== "hardware" || !type) return null;
+  return `${type}: ${(link ?? "").trim()}`;
 }
 
 export type SubmissionInput = {
