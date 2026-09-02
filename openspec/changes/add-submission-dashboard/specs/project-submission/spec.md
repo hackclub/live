@@ -52,26 +52,26 @@ The system SHALL let an authenticated user see the sum of `Optional - Override H
 - **THEN** the system displays a total of zero
 
 ### Requirement: Submitter can see a list of their own previous submissions
-The system SHALL let an authenticated user see every submission record whose `Email` matches their own, each showing at least its `Review Status`/`Approved` state, Code URL, Playable URL, and Lapse Link(s) if any.
+The system SHALL let an authenticated user see every submission record whose `Email` matches their own, each showing at least its `Review Status`/`Approved` state, Code URL, Playable URL, and work-log type and link if any.
 
 #### Scenario: User has multiple submissions
 - **WHEN** an authenticated user who has submitted more than one project loads their dashboard
 - **THEN** the system displays all of that user's submission records, each with its own status
 
 ### Requirement: Submission track determines whether a Hackatime project is required
-The system SHALL let the submitter choose a Software or Hardware track. For Software, a Hackatime project selection is required and hours are computed server-side from Hackatime. For Hardware, a Hackatime project is not required; instead a Lapse Link and a self-reported hours value are required, and the self-reported value is written to `Optional - Override Hours Spent` as-is.
+The system SHALL let the submitter choose a Software or Hardware track. For Software, a Hackatime project selection is required and hours are computed server-side from Hackatime. For Hardware, a Hackatime project is not required; instead the submitter chooses Lapse or Git Journal, provides the matching link and a self-reported hours value, and the system writes the choice to `Justification - Work Log Type` and the hours to `Optional - Override Hours Spent`.
 
 #### Scenario: Software track without a selected project
 - **WHEN** a Software-track submission does not include a valid Hackatime project selection
 - **THEN** the system rejects the request with a field error and creates no record
 
-#### Scenario: Hardware track without a Lapse Link or hours
-- **WHEN** a Hardware-track submission is missing a Lapse Link or an hours value
+#### Scenario: Hardware track without work-log evidence or hours
+- **WHEN** a Hardware-track submission is missing its Lapse/Git Journal choice, matching link, or hours value
 - **THEN** the system rejects the request with a field error and creates no record
 
 #### Scenario: Hardware track submission
-- **WHEN** a Hardware-track submission includes a Lapse Link and an hours value, with no Hackatime project selected
-- **THEN** the system creates or updates the record with the self-reported hours in `Optional - Override Hours Spent` and does not require or contact Hackatime's projects endpoint
+- **WHEN** a Hardware-track submission includes a Lapse or Git Journal choice, matching link, and hours value, with no Hackatime project selected
+- **THEN** the system creates or updates the record with the selected work-log type, the submitted link, and the self-reported hours in `Optional - Override Hours Spent`, and does not require or contact Hackatime's projects endpoint
 
 ### Requirement: Submission either fully succeeds or fails loudly
 The system SHALL NOT leave a partial Airtable record if any part of the submission process fails.

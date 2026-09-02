@@ -13,7 +13,13 @@ import {
 } from "../../../src/lib/airtable";
 import { getIdentity } from "../../../src/lib/hackclub";
 import { getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "../../../src/lib/hackatime";
-import { validateSubmissionInput, type SubmissionInput } from "../../../src/lib/submission";
+import {
+  parseWorkLogType,
+  validateSubmissionInput,
+  WORK_LOG_TYPE_FIELD,
+  workLogTypeForAirtable,
+  type SubmissionInput,
+} from "../../../src/lib/submission";
 
 export async function POST(request: Request) {
   const session = await getSessionFromRequest(request);
@@ -30,8 +36,10 @@ export async function POST(request: Request) {
   const recordId = String(formData.get("recordId") ?? "").trim() || null;
   const updateNote = String(formData.get("updateNote") ?? "").trim();
   const track = formData.get("track") === "hardware" ? "hardware" : "software";
+  const workLogType = parseWorkLogType(formData.get("workLogType"));
   const input: Partial<SubmissionInput> = {
     track,
+    workLogType: workLogType ?? undefined,
     codeUrl: String(formData.get("codeUrl") ?? ""),
     playableUrl: String(formData.get("playableUrl") ?? ""),
     description: String(formData.get("description") ?? ""),
@@ -124,6 +132,7 @@ export async function POST(request: Request) {
     [SUBMISSION_FIELDS.playableUrl]: input.playableUrl,
     [SUBMISSION_FIELDS.description]: input.description,
     [SUBMISSION_FIELDS.lapseLinks]: input.lapseLinks || undefined,
+    [WORK_LOG_TYPE_FIELD]: workLogTypeForAirtable(track, input.workLogType),
     [SUBMISSION_FIELDS.firstName]: identity.first_name ?? "",
     [SUBMISSION_FIELDS.lastName]: identity.last_name ?? "",
     [SUBMISSION_FIELDS.email]: identity.primary_email,

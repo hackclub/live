@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "node --test src/lib/submission.test.ts"
   },
   "dependencies": {
     "jose": "^6.2.10",

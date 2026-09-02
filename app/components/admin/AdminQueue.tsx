@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import MessageThread, { type ThreadMessage } from "../dashboard/MessageThread";
+import type { WorkLogType } from "../../../src/lib/submission";
 
 export type AdminSubmissionRow = {
   id: string;
@@ -9,6 +10,7 @@ export type AdminSubmissionRow = {
   codeUrl: string;
   playableUrl: string;
   lapseLinks: string;
+  workLogType: WorkLogType;
   screenshotUrl: string | null;
   approved: boolean;
   reviewStatus: string;
@@ -76,7 +78,7 @@ export default function AdminQueue({
               <a className="link" href={row.playableUrl} target="_blank" rel="noreferrer">
                 Playable URL
               </a>
-              {row.lapseLinks && <p>Lapse: {row.lapseLinks}</p>}
+              {row.lapseLinks && <p>{row.workLogType}: {row.lapseLinks}</p>}
               <p className="opacity-60">
                 {row.approved ? "Approved" : row.reviewStatus}
               </p>

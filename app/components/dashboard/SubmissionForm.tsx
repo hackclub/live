@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import {
+  getWorkLogCopy,
+  WORK_LOG_TYPES,
+  type WorkLogType,
+} from "../../../src/lib/submission";
 
 type HackatimeProjectOption = { name: string; hours: number };
 type Track = "software" | "hardware";
@@ -17,6 +22,7 @@ export default function SubmissionForm({
   recordId?: string;
   defaults?: {
     track?: Track;
+    workLogType?: WorkLogType;
     codeUrl?: string;
     playableUrl?: string;
     description?: string;
@@ -33,6 +39,9 @@ export default function SubmissionForm({
   onSaved?: () => void;
 }) {
   const [track, setTrack] = useState<Track>(defaults?.track ?? "software");
+  const [workLogType, setWorkLogType] = useState<WorkLogType>(
+    defaults?.workLogType ?? WORK_LOG_TYPES.lapse,
+  );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -47,6 +56,7 @@ export default function SubmissionForm({
 
     const formData = new FormData(e.currentTarget);
     formData.set("track", track);
+    formData.set("workLogType", workLogType);
     if (recordId) formData.set("recordId", recordId);
 
     try {
@@ -65,6 +75,8 @@ export default function SubmissionForm({
       setSubmitting(false);
     }
   }
+
+  const workLogCopy = getWorkLogCopy(workLogType);
 
   return (
     <form onSubmit={onSubmit} className="flex font-2 flex-col gap-4 max-w-xl">
@@ -108,12 +120,33 @@ export default function SubmissionForm({
       ) : (
         <>
           <div>
-            <label className="label">Lapse Link</label>
+            <div className="join" aria-label="Work log type">
+              <button
+                type="button"
+                className={`join-item btn ${workLogType === WORK_LOG_TYPES.lapse ? "btn-primary" : ""}`}
+                aria-pressed={workLogType === WORK_LOG_TYPES.lapse}
+                onClick={() => setWorkLogType(WORK_LOG_TYPES.lapse)}
+              >
+                Lapse
+              </button>
+              <button
+                type="button"
+                className={`join-item btn ${workLogType === WORK_LOG_TYPES.gitJournal ? "btn-primary" : ""}`}
+                aria-pressed={workLogType === WORK_LOG_TYPES.gitJournal}
+                onClick={() => setWorkLogType(WORK_LOG_TYPES.gitJournal)}
+              >
+                Git Journal
+              </button>
+            </div>
+            {fieldErrors.workLogType && <p className="text-error text-sm">{fieldErrors.workLogType}</p>}
+          </div>
+          <div>
+            <label className="label">{workLogCopy.label}</label>
             <input
               name="lapseLinks"
               className="input input-bordered w-full"
               defaultValue={defaults?.lapseLinks}
-              placeholder="Required for hardware submissions"
+              placeholder={workLogCopy.placeholder}
               required
             />
             {fieldErrors.lapseLinks && <p className="text-error text-sm">{fieldErrors.lapseLinks}</p>}
