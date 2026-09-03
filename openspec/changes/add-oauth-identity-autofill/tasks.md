@@ -6,45 +6,45 @@
 
 ## 2. OAuth scope + identity mapping (`src/lib/hackclub.ts`)
 
-- [ ] 2.1 Change `HACKCLUB_OAUTH_SCOPE` to `"name email verification_status address birthdate"` and replace the stale "HQ-Official-tier-only / collected manually" comment with the new rationale
-- [ ] 2.2 Extend `HackclubIdentity` with the address block + `birthdate` (and `ysws_eligible` if used)
-- [ ] 2.3 Add `mapIdentityAddress(identity)` → `{ addressLine1, addressLine2, city, state, country, zip } | null` (null if any required component missing; select primary/first when address is an array; split `street_address` on first newline into line 1 / line 2 if lines aren't discrete)
-- [ ] 2.4 Add `isIdentityCompleteForSubmission(identity)` → boolean (verified AND `mapIdentityAddress` non-null AND parseable `birthdate`)
-- [ ] 2.5 Add a `birthdate` → `YYYY-MM-DD` normalizer if the raw value isn't already in that form
+- [x] 2.1 Change `HACKCLUB_OAUTH_SCOPE` to `"name email verification_status address birthdate"` and replace the stale "HQ-Official-tier-only / collected manually" comment with the new rationale
+- [x] 2.2 Extend `HackclubIdentity` with the address block + `birthdate` (and `ysws_eligible` if used)
+- [x] 2.3 Add `mapIdentityAddress(identity)` → `{ addressLine1, addressLine2, city, state, country, zip } | null` (null if any required component missing; select primary/first when address is an array; split `street_address` on first newline into line 1 / line 2 if lines aren't discrete)
+- [x] 2.4 Add `isIdentityCompleteForSubmission(identity)` → boolean (verified AND `mapIdentityAddress` non-null AND parseable `birthdate`)
+- [x] 2.5 Add a `birthdate` → `YYYY-MM-DD` normalizer if the raw value isn't already in that form
 
 ## 3. Submit API (`app/api/submit/route.ts`)
 
-- [ ] 3.1 Remove `addressLine1/addressLine2/city/state/country/zip/birthday` reads from `formData` and from the `input` object
-- [ ] 3.2 After `getIdentity`, reject with `{ error: "identity_incomplete" }` (409) and no Airtable write when `isIdentityCompleteForSubmission` is false
-- [ ] 3.3 Build the Airtable `fields` address + `Birthday` entries from `mapIdentityAddress(identity)` and the normalized birthdate, for both create and update paths
-- [ ] 3.4 Confirm `updateAirtableRecord` on resubmission overwrites address/birthday with identity values (no special-casing needed once 3.3 is done)
+- [x] 3.1 Remove `addressLine1/addressLine2/city/state/country/zip/birthday` reads from `formData` and from the `input` object
+- [x] 3.2 After `getIdentity`, reject with `{ error: "identity_incomplete" }` (409) and no Airtable write when `isIdentityCompleteForSubmission` is false
+- [x] 3.3 Build the Airtable `fields` address + `Birthday` entries from `mapIdentityAddress(identity)` and the normalized birthdate, for both create and update paths
+- [x] 3.4 Confirm `updateAirtableRecord` on resubmission overwrites address/birthday with identity values (no special-casing needed once 3.3 is done)
 
 ## 4. Validation + types (`src/lib/submission.ts`)
 
-- [ ] 4.1 Drop `addressLine1/addressLine2/city/state/country/zip/birthday` from `SubmissionInput`
-- [ ] 4.2 Remove the address/birthday entries from `COMMON_REQUIRED_FIELDS` in `validateSubmissionInput`
-- [ ] 4.3 Update any other `SubmissionInput` consumers/imports for the narrower type
+- [x] 4.1 Drop `addressLine1/addressLine2/city/state/country/zip/birthday` from `SubmissionInput`
+- [x] 4.2 Remove the address/birthday entries from `COMMON_REQUIRED_FIELDS` in `validateSubmissionInput`
+- [x] 4.3 Update any other `SubmissionInput` consumers/imports for the narrower type
 
 ## 5. Submission form (`app/components/dashboard/SubmissionForm.tsx`)
 
-- [ ] 5.1 Make Address (Line 1), Address (Line 2), City, State/Province, Country, ZIP/Postal Code `disabled` inputs bound to `defaults`, drop `required` and their `fieldErrors` rendering
-- [ ] 5.2 Make Birthday a `disabled` `<input type="date">` bound to `defaults.birthday`
-- [ ] 5.3 Keep `defaults` types for these fields; ensure the form still submits fine when they're absent from `FormData`
+- [x] 5.1 Make Address (Line 1), Address (Line 2), City, State/Province, Country, ZIP/Postal Code `disabled` inputs bound to `defaults`, drop `required` and their `fieldErrors` rendering
+- [x] 5.2 Make Birthday a `disabled` `<input type="date">` bound to `defaults.birthday`
+- [x] 5.3 Keep `defaults` types for these fields; ensure the form still submits fine when they're absent from `FormData`
 
 ## 6. Dashboard (`app/dashboard/page.tsx`)
 
-- [ ] 6.1 Compute `mapIdentityAddress(identity)` + birthdate and pass them as `defaults` into the new-submission `<SubmissionForm/>` (currently rendered with no `defaults`)
-- [ ] 6.2 Pass the same identity-derived `defaults` into the resubmission form path (identity is authoritative over stored record values)
-- [ ] 6.3 When `isIdentityCompleteForSubmission` is false, render a notice with a link to finish Hack Club identity verification in place of the new-submission `<SubmissionForm/>`, keeping the existing-submissions list visible
+- [x] 6.1 Compute `mapIdentityAddress(identity)` + birthdate and pass them as `defaults` into the new-submission `<SubmissionForm/>` (currently rendered with no `defaults`)
+- [x] 6.2 Pass the same identity-derived `defaults` into the resubmission form path (identity is authoritative over stored record values)
+- [x] 6.3 When `isIdentityCompleteForSubmission` is false, render a notice with a link to finish Hack Club identity verification in place of the new-submission `<SubmissionForm/>`, keeping the existing-submissions list visible
 
 ## 7. Verify
 
-- [ ] 7.1 `npm run build` / typecheck passes with the narrowed `SubmissionInput`
+- [x] 7.1 `npm run build` / typecheck passes with the narrowed `SubmissionInput` — `tsc --noEmit` (strict) passes; changed files lint clean. Full `next build` not run inside the worktree (Turbopack rejects a node_modules symlink pointing outside the worktree root); run it in a checkout with real `node_modules`.
 - [ ] 7.2 Manual: fresh login shows the OAuth consent screen listing address + birthday; dashboard form shows them prefilled and disabled
 - [ ] 7.3 Manual: submit writes identity-derived address + birthday to Airtable; a request with forged `addressLine1` in the body is ignored
 - [ ] 7.4 Manual: an account without a verified address is blocked on both the dashboard and `POST /api/submit`
 - [ ] 7.5 Manual: resubmitting an older record refreshes its address/birthday from the current identity
-- [ ] 7.6 `openspec validate add-oauth-identity-autofill --strict` passes
+- [x] 7.6 `openspec validate add-oauth-identity-autofill --strict` passes
 
 ## 8. Rollout
 

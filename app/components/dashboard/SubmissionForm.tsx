@@ -182,47 +182,47 @@ export default function SubmissionForm({
         {fieldErrors.screenshot && <p className="text-error text-sm">{fieldErrors.screenshot}</p>}
       </div>
 
+      {/* Address + birthday are pulled from your Hack Club identity — shown
+          here read-only, not editable, and not sent from this form. */}
+      <p className="text-sm opacity-70">
+        Shipping address and birthday come from your verified Hack Club identity.
+      </p>
+
       <div>
         <label className="label">Address (Line 1)</label>
-        <input name="addressLine1" className="input input-bordered w-full" defaultValue={defaults?.addressLine1} required />
-        {fieldErrors.addressLine1 && <p className="text-error text-sm">{fieldErrors.addressLine1}</p>}
+        <input className="input input-bordered w-full" value={defaults?.addressLine1 ?? ""} disabled />
       </div>
 
       <div>
         <label className="label">Address (Line 2)</label>
-        <input name="addressLine2" className="input input-bordered w-full" defaultValue={defaults?.addressLine2} />
+        <input className="input input-bordered w-full" value={defaults?.addressLine2 ?? ""} disabled />
       </div>
 
       <div className="flex gap-2">
         <div className="flex-1">
           <label className="label">City</label>
-          <input name="city" className="input input-bordered w-full" defaultValue={defaults?.city} required />
-          {fieldErrors.city && <p className="text-error text-sm">{fieldErrors.city}</p>}
+          <input className="input input-bordered w-full" value={defaults?.city ?? ""} disabled />
         </div>
         <div className="flex-1">
           <label className="label">State / Province</label>
-          <input name="state" className="input input-bordered w-full" defaultValue={defaults?.state} required />
-          {fieldErrors.state && <p className="text-error text-sm">{fieldErrors.state}</p>}
+          <input className="input input-bordered w-full" value={defaults?.state ?? ""} disabled />
         </div>
       </div>
 
       <div className="flex gap-2">
         <div className="flex-1">
           <label className="label">Country</label>
-          <input name="country" className="input input-bordered w-full" defaultValue={defaults?.country} required />
-          {fieldErrors.country && <p className="text-error text-sm">{fieldErrors.country}</p>}
+          <input className="input input-bordered w-full" value={defaults?.country ?? ""} disabled />
         </div>
         <div className="flex-1">
           <label className="label">ZIP / Postal Code</label>
-          <input name="zip" className="input input-bordered w-full" defaultValue={defaults?.zip} required />
-          {fieldErrors.zip && <p className="text-error text-sm">{fieldErrors.zip}</p>}
+          <input className="input input-bordered w-full" value={defaults?.zip ?? ""} disabled />
         </div>
       </div>
 
       <div>
         <label className="label">Birthday</label>
-        <input name="birthday" type="date" className="input input-bordered w-full" defaultValue={defaults?.birthday} required />
-        {fieldErrors.birthday && <p className="text-error text-sm">{fieldErrors.birthday}</p>}
+        <input type="date" className="input input-bordered w-full" value={defaults?.birthday ?? ""} disabled />
       </div>
 
       {genericError && <p className="text-error">{genericError}</p>}
