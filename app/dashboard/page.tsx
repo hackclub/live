@@ -1,11 +1,15 @@
 import { requireSession } from "../../src/lib/auth";
 import {
+  countPaidReferralsForHandle,
   getPersonalApprovedHours,
+  getReferralByRefereeEmail,
   listMessagesBySubmissionIds,
   listRedemptionsByEmail,
   listSubmissionsByEmail,
   REDEMPTION_FIELDS,
+  REFERRAL_FIELDS,
   SUBMISSION_FIELDS,
+  upsertReferralResolution,
 } from "../../src/lib/airtable";
 import { getIdentity } from "../../src/lib/hackclub";
 import Link from "next/link";
@@ -14,6 +18,7 @@ import { getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "..
 import SubmissionForm from "../components/dashboard/SubmissionForm";
 import SubmissionsList, { type OwnSubmission } from "../components/dashboard/SubmissionsList";
 import PurchasedPrizes, { type Redemption } from "../components/dashboard/PurchasedPrizes";
+import ReferralPanel from "../components/dashboard/ReferralPanel";
 
 export default async function DashboardPage() {
   // Redirects to /api/auth/login or /api/auth/hackatime/login if either
@@ -49,6 +54,28 @@ export default async function DashboardPage() {
     .map((p) => ({ name: p.name, hours: trackedHoursForProject(p) }));
 
   const messagesBySubmission = await listMessagesBySubmissionIds(ownRecords.map((r) => r.id));
+
+  // Referral section: keep the handle -> email map fresh, then read this
+  // user's own referrer (if any) and how many people they've referred who
+  // shipped. All best-effort — a missing Referrals table shouldn't 500 the
+  // dashboard.
+  const githubUsername = hackatimeMe?.github_username?.trim() || "";
+  const [referralRow, referredCount] = await Promise.all([
+    getReferralByRefereeEmail(identity.primary_email).catch(() => null),
+    githubUsername
+      ? countPaidReferralsForHandle(githubUsername).catch(() => 0)
+      : Promise.resolve(0),
+  ]);
+  if (githubUsername) {
+    try {
+      await upsertReferralResolution(githubUsername, identity.primary_email);
+    } catch (err) {
+      console.warn("[referral] upsertReferralResolution failed", err);
+    }
+  }
+  const referrerHandle = referralRow
+    ? String(referralRow.fields[REFERRAL_FIELDS.referrerHandle] ?? "") || null
+    : null;
 
   const submissions: OwnSubmission[] = ownRecords.map((record) => {
       const hackatimeProjectName = String(record.fields[SUBMISSION_FIELDS.hackatimeProjects] ?? "");
@@ -100,7 +127,7 @@ export default async function DashboardPage() {
             <p>You have {personalHours.toFixed(1)} tokens. lock in to earn some</p>  
             </> : 
             <div className="font-2 flex flex-row items-center gap-2">
-              <p>You have {personalHours.toFixed(1)} tokens. let's go </p>
+              <p>You have {personalHours.toFixed(1)} tokens. let&apos;s go </p>
               <Link className="link text-blue-500" href="/redeem">spend em!</Link>
             </div>
             
@@ -129,6 +156,13 @@ export default async function DashboardPage() {
         <p className="font-2 text-lg">Your Prizes</p>
         <PurchasedPrizes redemptions={redemptions} />
       </div>
+
+      <ReferralPanel
+        handle={githubUsername}
+        referrerHandle={referrerHandle}
+        hasSubmissions={ownRecords.length > 0}
+        referredCount={referredCount}
+      />
         </section>
 
         <section className="mx-auto flex flex-col gap-4">

@@ -65,6 +65,37 @@ export const CONFIG_FIELDS = {
 // The single config row that holds the manual /obs-timer offset in minutes.
 export const TIMER_ADJUSTMENT_KEY = "timerAdjustmentMinutes";
 
+// Referral program — see add-referral-program. One `Referrals` row per referee,
+// plus a lazy `Referral Resolutions` map so a referrer handle (GitHub username)
+// can be turned into an email at payout time.
+export const REFERRAL_FIELDS = {
+  refereeEmail: "Referee Email",
+  referrerHandle: "Referrer Handle",
+  referrerEmail: "Referrer Email",
+  source: "Source",
+  status: "Status",
+  boundAt: "Bound At",
+  paidAt: "Paid At",
+  refereeSubmission: "Referee Submission",
+  redemption: "Redemption",
+} as const;
+
+export const REFERRAL_RESOLUTION_FIELDS = {
+  handle: "Handle",
+  email: "Email",
+} as const;
+
+export const REFERRAL_STATUS = {
+  pending: "pending",
+  paid: "paid",
+  void: "void",
+} as const;
+
+export const REFERRAL_SOURCE = {
+  link: "link",
+  code: "code",
+} as const;
+
 function submissionTableConfig() {
   const apiKey = process.env.AIRTABLE_PAT;
   const baseId = process.env.AIRTABLE_BASE_ID;
@@ -101,6 +132,26 @@ function configTableConfig() {
   const tableName = process.env.AIRTABLE_CONFIG_TABLE_NAME;
   if (!apiKey || !baseId || !tableName) {
     throw new Error("Airtable config env vars are not configured");
+  }
+  return { apiKey, baseId, tableName };
+}
+
+function referralsTableConfig() {
+  const apiKey = process.env.AIRTABLE_PAT;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  const tableName = process.env.AIRTABLE_REFERRALS_TABLE_NAME;
+  if (!apiKey || !baseId || !tableName) {
+    throw new Error("Airtable referrals env vars are not configured");
+  }
+  return { apiKey, baseId, tableName };
+}
+
+function referralResolutionsTableConfig() {
+  const apiKey = process.env.AIRTABLE_PAT;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  const tableName = process.env.AIRTABLE_REFERRAL_RESOLUTIONS_TABLE_NAME;
+  if (!apiKey || !baseId || !tableName) {
+    throw new Error("Airtable referral resolutions env vars are not configured");
   }
   return { apiKey, baseId, tableName };
 }
@@ -566,5 +617,192 @@ export async function createMessage({
       },
       typecast: false,
     }),
+  });
+}
+
+// ----- Referral program -----
+
+// Same single-quote escaping the other filterByFormula callers do inline;
+// pulled out here because the referral queries use it in several places.
+function escapeFormulaValue(value: string): string {
+  return value.replace(/'/g, "\\'");
+}
+
+// Upserts the { Handle, Email } row for a user. Called on every /dashboard load
+// so a referrer's handle can be resolved to an email later, at payout time.
+export async function upsertReferralResolution(handle: string, email: string): Promise<void> {
+  const config = referralResolutionsTableConfig();
+  const formula = encodeURIComponent(
+    `LOWER({${REFERRAL_RESOLUTION_FIELDS.handle}}) = '${escapeFormulaValue(handle.toLowerCase())}'`,
+  );
+  const data = await airtableRequest<{ records: AirtableRecord[] }>(
+    config,
+    `?filterByFormula=${formula}&maxRecords=1`,
+  );
+  const existing = data.records[0];
+  if (existing) {
+    if (String(existing.fields[REFERRAL_RESOLUTION_FIELDS.email] ?? "") === email) return;
+    await airtableRequest(config, `/${existing.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        fields: { [REFERRAL_RESOLUTION_FIELDS.email]: email },
+        typecast: false,
+      }),
+    });
+    return;
+  }
+  await airtableRequest(config, "", {
+    method: "POST",
+    body: JSON.stringify({
+      fields: {
+        [REFERRAL_RESOLUTION_FIELDS.handle]: handle,
+        [REFERRAL_RESOLUTION_FIELDS.email]: email,
+      },
+      typecast: false,
+    }),
+  });
+}
+
+// handle -> email: the Referral Resolutions row first, then any submission with
+// a matching GitHub Username, then null. Both lookups degrade to null on error
+// so callers on the payout path can keep the referral pending and retry.
+export async function resolveReferrerEmail(handle: string): Promise<string | null> {
+  const normalized = handle.trim().toLowerCase();
+  if (!normalized) return null;
+
+  try {
+    const config = referralResolutionsTableConfig();
+    const formula = encodeURIComponent(
+      `LOWER({${REFERRAL_RESOLUTION_FIELDS.handle}}) = '${escapeFormulaValue(normalized)}'`,
+    );
+    const data = await airtableRequest<{ records: AirtableRecord[] }>(
+      config,
+      `?filterByFormula=${formula}&maxRecords=1`,
+    );
+    const email = data.records[0]?.fields[REFERRAL_RESOLUTION_FIELDS.email];
+    if (typeof email === "string" && email) return email;
+  } catch (err) {
+    console.warn("[referral] resolveReferrerEmail resolution-table lookup failed", err);
+  }
+
+  try {
+    const config = submissionTableConfig();
+    const formula = encodeURIComponent(
+      `LOWER({${SUBMISSION_FIELDS.githubUsername}}) = '${escapeFormulaValue(normalized)}'`,
+    );
+    const data = await airtableRequest<{ records: AirtableRecord[] }>(
+      config,
+      `?filterByFormula=${formula}&maxRecords=1&fields[]=${encodeURIComponent(SUBMISSION_FIELDS.email)}`,
+    );
+    const email = data.records[0]?.fields[SUBMISSION_FIELDS.email];
+    if (typeof email === "string" && email) return email;
+  } catch (err) {
+    console.warn("[referral] resolveReferrerEmail submissions fallback failed", err);
+  }
+
+  return null;
+}
+
+export async function getReferralByRefereeEmail(email: string): Promise<AirtableRecord | null> {
+  const config = referralsTableConfig();
+  const formula = encodeURIComponent(
+    `{${REFERRAL_FIELDS.refereeEmail}} = '${escapeFormulaValue(email)}'`,
+  );
+  const data = await airtableRequest<{ records: AirtableRecord[] }>(
+    config,
+    `?filterByFormula=${formula}&maxRecords=1`,
+  );
+  return data.records[0] ?? null;
+}
+
+export async function getReferralByRefereeEmailAndStatus(
+  email: string,
+  status: (typeof REFERRAL_STATUS)[keyof typeof REFERRAL_STATUS],
+): Promise<AirtableRecord | null> {
+  const config = referralsTableConfig();
+  const formula = encodeURIComponent(
+    `AND({${REFERRAL_FIELDS.refereeEmail}} = '${escapeFormulaValue(email)}', {${REFERRAL_FIELDS.status}} = '${status}')`,
+  );
+  const data = await airtableRequest<{ records: AirtableRecord[] }>(
+    config,
+    `?filterByFormula=${formula}&maxRecords=1`,
+  );
+  return data.records[0] ?? null;
+}
+
+// Count of paid referrals credited to a handle — the referrer's "people I
+// referred who shipped" number, which is also their earned-balloon count.
+export async function countPaidReferralsForHandle(handle: string): Promise<number> {
+  const normalized = handle.trim().toLowerCase();
+  if (!normalized) return 0;
+  const config = referralsTableConfig();
+  let count = 0;
+  let offset: string | undefined;
+  do {
+    const params = new URLSearchParams();
+    params.set(
+      "filterByFormula",
+      `AND(LOWER({${REFERRAL_FIELDS.referrerHandle}}) = '${escapeFormulaValue(normalized)}', {${REFERRAL_FIELDS.status}} = '${REFERRAL_STATUS.paid}')`,
+    );
+    params.append("fields[]", REFERRAL_FIELDS.status);
+    params.set("pageSize", "100");
+    if (offset) params.set("offset", offset);
+    const data = await airtableRequest<{ records: AirtableRecord[]; offset?: string }>(
+      config,
+      `?${params.toString()}`,
+    );
+    count += data.records.length;
+    offset = data.offset;
+  } while (offset);
+  return count;
+}
+
+export async function createReferral({
+  refereeEmail,
+  referrerHandle,
+  source,
+}: {
+  refereeEmail: string;
+  referrerHandle: string;
+  source: (typeof REFERRAL_SOURCE)[keyof typeof REFERRAL_SOURCE];
+}): Promise<AirtableRecord> {
+  const config = referralsTableConfig();
+  return airtableRequest(config, "", {
+    method: "POST",
+    body: JSON.stringify({
+      fields: {
+        [REFERRAL_FIELDS.refereeEmail]: refereeEmail,
+        [REFERRAL_FIELDS.referrerHandle]: referrerHandle,
+        [REFERRAL_FIELDS.source]: source,
+        [REFERRAL_FIELDS.status]: REFERRAL_STATUS.pending,
+        [REFERRAL_FIELDS.boundAt]: new Date().toISOString(),
+      },
+      typecast: false,
+    }),
+  });
+}
+
+export async function markReferralPaid({
+  referralId,
+  referrerEmail,
+  submissionRecordId,
+  redemptionRecordId,
+}: {
+  referralId: string;
+  referrerEmail: string;
+  submissionRecordId: string;
+  redemptionRecordId: string;
+}): Promise<void> {
+  const config = referralsTableConfig();
+  const fields: Record<string, unknown> = {
+    [REFERRAL_FIELDS.status]: REFERRAL_STATUS.paid,
+    [REFERRAL_FIELDS.paidAt]: new Date().toISOString(),
+    [REFERRAL_FIELDS.referrerEmail]: referrerEmail,
+  };
+  if (submissionRecordId) fields[REFERRAL_FIELDS.refereeSubmission] = [submissionRecordId];
+  if (redemptionRecordId) fields[REFERRAL_FIELDS.redemption] = [redemptionRecordId];
+  await airtableRequest(config, `/${referralId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ fields, typecast: false }),
   });
 }

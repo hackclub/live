@@ -3,12 +3,14 @@ import { getSessionFromRequest } from "../../../../src/lib/auth";
 import { isAdminEmail } from "../../../../src/lib/admin";
 import {
   createMessage,
+  getSubmissionById,
   MESSAGE_SENDER,
   REVIEW_STATUS,
   SUBMISSION_FIELDS,
   updateAirtableRecord,
 } from "../../../../src/lib/airtable";
 import { getIdentity } from "../../../../src/lib/hackclub";
+import { payReferral } from "../../../../src/lib/referral";
 
 const ACTIONS = ["approve", "reject", "fraud"] as const;
 type Action = (typeof ACTIONS)[number];
@@ -61,6 +63,24 @@ export async function POST(request: Request) {
       sender: MESSAGE_SENDER.admin,
       message,
     });
+  }
+
+  // Referral payout: if this approved submission's submitter was referred,
+  // grant the referrer one free water balloon. Idempotent and best-effort —
+  // never fails the review action.
+  if (action === "approve") {
+    try {
+      const submission = await getSubmissionById(recordId);
+      const submitterEmail = String(submission?.fields[SUBMISSION_FIELDS.email] ?? "");
+      if (submitterEmail) {
+        const outcome = await payReferral(submitterEmail, recordId);
+        if (outcome !== "skipped") {
+          console.log(`[referral] payout for ${submitterEmail} on approve: ${outcome}`);
+        }
+      }
+    } catch (err) {
+      console.error("[referral] payout on approve failed", err);
+    }
   }
 
   return NextResponse.json({ ok: true });
