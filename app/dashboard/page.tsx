@@ -7,7 +7,12 @@ import {
   REDEMPTION_FIELDS,
   SUBMISSION_FIELDS,
 } from "../../src/lib/airtable";
-import { getIdentity } from "../../src/lib/hackclub";
+import {
+  getIdentity,
+  isIdentityCompleteForSubmission,
+  mapIdentityAddress,
+  normalizeBirthdate,
+} from "../../src/lib/hackclub";
 import Link from "next/link";
 import Footer from "../components/Footer";
 import { getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "../../src/lib/hackatime";
@@ -48,6 +53,21 @@ export default async function DashboardPage() {
     .filter((p) => !p.archived)
     .map((p) => ({ name: p.name, hours: trackedHoursForProject(p) }));
 
+  // Address + birthday are authoritative from the HCA identity — used for both
+  // the new-submission form and every resubmission, in place of whatever an
+  // older record happened to store.
+  const identityComplete = isIdentityCompleteForSubmission(identity);
+  const mappedAddress = mapIdentityAddress(identity);
+  const identityDefaults = {
+    addressLine1: mappedAddress?.addressLine1 ?? "",
+    addressLine2: mappedAddress?.addressLine2 ?? "",
+    city: mappedAddress?.city ?? "",
+    state: mappedAddress?.state ?? "",
+    country: mappedAddress?.country ?? "",
+    zip: mappedAddress?.zip ?? "",
+    birthday: normalizeBirthdate(identity.birthdate) ?? "",
+  };
+
   const messagesBySubmission = await listMessagesBySubmissionIds(ownRecords.map((r) => r.id));
 
   const submissions: OwnSubmission[] = ownRecords.map((record) => {
@@ -64,13 +84,7 @@ export default async function DashboardPage() {
         messages: messagesBySubmission.get(record.id) ?? [],
         defaults: {
           description: String(record.fields[SUBMISSION_FIELDS.description] ?? ""),
-          addressLine1: String(record.fields[SUBMISSION_FIELDS.addressLine1] ?? ""),
-          addressLine2: String(record.fields[SUBMISSION_FIELDS.addressLine2] ?? ""),
-          city: String(record.fields[SUBMISSION_FIELDS.city] ?? ""),
-          state: String(record.fields[SUBMISSION_FIELDS.state] ?? ""),
-          country: String(record.fields[SUBMISSION_FIELDS.country] ?? ""),
-          zip: String(record.fields[SUBMISSION_FIELDS.zip] ?? ""),
-          birthday: String(record.fields[SUBMISSION_FIELDS.birthday] ?? ""),
+          ...identityDefaults,
           hardwareHours: hackatimeProjectName ? "" : String(record.fields[SUBMISSION_FIELDS.overrideHours] ?? ""),
         },
       };
@@ -133,7 +147,25 @@ export default async function DashboardPage() {
 
         <section className="mx-auto flex flex-col gap-4">
           <p className="text-2xl font-2">submit a new project</p>
-          <SubmissionForm githubUsername={hackatimeMe?.github_username ?? ""} hackatimeProjects={projectOptions} />
+          {identityComplete ? (
+            <SubmissionForm
+              githubUsername={hackatimeMe?.github_username ?? ""}
+              hackatimeProjects={projectOptions}
+              defaults={identityDefaults}
+            />
+          ) : (
+            <div className="bg-base-200 border border-warning p-4 font-2 flex flex-col gap-2">
+              <p className="font-bold">Finish verifying your Hack Club identity first</p>
+              <p className="text-sm">
+                Submissions pull your shipping address and birthday straight from your
+                verified Hack Club identity. Yours isn&apos;t complete yet — verify it at{" "}
+                <a className="link text-blue-500" href="https://identity.hackclub.com" target="_blank" rel="noreferrer">
+                  identity.hackclub.com
+                </a>
+                , then reload this page to submit.
+              </p>
+            </div>
+          )}
         </section>
       </div>
 

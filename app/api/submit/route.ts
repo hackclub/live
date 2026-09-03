@@ -11,7 +11,12 @@ import {
   updateAirtableRecord,
   uploadAirtableAttachment,
 } from "../../../src/lib/airtable";
-import { getIdentity } from "../../../src/lib/hackclub";
+import {
+  getIdentity,
+  isIdentityCompleteForSubmission,
+  mapIdentityAddress,
+  normalizeBirthdate,
+} from "../../../src/lib/hackclub";
 import { getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "../../../src/lib/hackatime";
 import { validateSubmissionInput, type SubmissionInput } from "../../../src/lib/submission";
 
@@ -26,6 +31,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "identity_unavailable" }, { status: 401 });
   }
 
+  // Address + birthday come from the HCA identity, never the form. If the
+  // identity isn't verified or is missing either, there's nothing to write —
+  // block before touching Airtable (mirrors "fully succeeds or fails loudly").
+  if (!isIdentityCompleteForSubmission(identity)) {
+    return NextResponse.json({ error: "identity_incomplete" }, { status: 409 });
+  }
+  const identityAddress = mapIdentityAddress(identity)!;
+  const identityBirthday = normalizeBirthdate(identity.birthdate)!;
+
   const formData = await request.formData();
   const recordId = String(formData.get("recordId") ?? "").trim() || null;
   const updateNote = String(formData.get("updateNote") ?? "").trim();
@@ -36,16 +50,12 @@ export async function POST(request: Request) {
     playableUrl: String(formData.get("playableUrl") ?? ""),
     description: String(formData.get("description") ?? ""),
     lapseLinks: String(formData.get("lapseLinks") ?? ""),
-    addressLine1: String(formData.get("addressLine1") ?? ""),
-    addressLine2: String(formData.get("addressLine2") ?? ""),
-    city: String(formData.get("city") ?? ""),
-    state: String(formData.get("state") ?? ""),
-    country: String(formData.get("country") ?? ""),
-    zip: String(formData.get("zip") ?? ""),
-    birthday: String(formData.get("birthday") ?? ""),
     hackatimeProject: String(formData.get("hackatimeProject") ?? ""),
     hardwareHours: String(formData.get("hardwareHours") ?? ""),
   };
+  // NOTE: addressLine1/city/state/country/zip/birthday are intentionally NOT
+  // read from the form — they're sourced from the HCA identity above and any
+  // values in the request body are ignored.
   const screenshot = formData.get("screenshot");
 
   // A recordId means "fix and resubmit this specific project" — fetch it
@@ -128,13 +138,13 @@ export async function POST(request: Request) {
     [SUBMISSION_FIELDS.lastName]: identity.last_name ?? "",
     [SUBMISSION_FIELDS.email]: identity.primary_email,
     [SUBMISSION_FIELDS.githubUsername]: hackatimeMe?.github_username ?? "",
-    [SUBMISSION_FIELDS.addressLine1]: input.addressLine1,
-    [SUBMISSION_FIELDS.addressLine2]: input.addressLine2 || undefined,
-    [SUBMISSION_FIELDS.city]: input.city,
-    [SUBMISSION_FIELDS.state]: input.state,
-    [SUBMISSION_FIELDS.country]: input.country,
-    [SUBMISSION_FIELDS.zip]: input.zip,
-    [SUBMISSION_FIELDS.birthday]: input.birthday,
+    [SUBMISSION_FIELDS.addressLine1]: identityAddress.addressLine1,
+    [SUBMISSION_FIELDS.addressLine2]: identityAddress.addressLine2 || undefined,
+    [SUBMISSION_FIELDS.city]: identityAddress.city,
+    [SUBMISSION_FIELDS.state]: identityAddress.state,
+    [SUBMISSION_FIELDS.country]: identityAddress.country,
+    [SUBMISSION_FIELDS.zip]: identityAddress.zip,
+    [SUBMISSION_FIELDS.birthday]: identityBirthday,
     [SUBMISSION_FIELDS.hackatimeId]: hackatimeId,
     [SUBMISSION_FIELDS.hackatimeProjects]: hackatimeProjectName || undefined,
     // This is system-computed for Software (never user input) and the

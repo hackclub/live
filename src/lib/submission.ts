@@ -8,27 +8,17 @@ export type SubmissionInput = {
   playableUrl: string;
   description: string;
   lapseLinks: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  country: string;
-  zip: string;
-  birthday: string;
   hackatimeProject: string;
   hardwareHours: string;
 };
 
+// Address (Line 1/2), City, State/Province, Country, ZIP, and Birthday are
+// deliberately absent: they're sourced server-side from the HCA identity, not
+// the form, so there's no client value to validate.
 const COMMON_REQUIRED_FIELDS: Array<[keyof SubmissionInput, string]> = [
   ["codeUrl", "Code URL is required"],
   ["playableUrl", "Playable URL is required"],
   ["description", "Description is required"],
-  ["addressLine1", "Address is required"],
-  ["city", "City is required"],
-  ["state", "State / Province is required"],
-  ["country", "Country is required"],
-  ["zip", "ZIP / Postal Code is required"],
-  ["birthday", "Birthday is required"],
 ];
 
 // Server-side validation is authoritative — this same function is called
