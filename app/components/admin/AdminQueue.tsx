@@ -9,6 +9,8 @@ export type AdminSubmissionRow = {
   codeUrl: string;
   playableUrl: string;
   lapseLinks: string;
+  hackatimeProjects: string;
+  hours: number;
   screenshotUrl: string | null;
   approved: boolean;
   reviewStatus: string;
@@ -26,9 +28,14 @@ export default function AdminQueue({
   filter: Filter;
 }) {
   const [rejectDraft, setRejectDraft] = useState<Record<string, string>>({});
+  const [hoursDraft, setHoursDraft] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
 
-  async function act(recordId: string, action: "approve" | "reject" | "fraud") {
+  async function act(
+    recordId: string,
+    action: "approve" | "reject" | "fraud" | "hours",
+    extra?: Record<string, unknown>,
+  ) {
     const message = action === "reject" ? rejectDraft[recordId]?.trim() : undefined;
     if (action === "reject" && !message) return;
 
@@ -37,7 +44,7 @@ export default function AdminQueue({
       const res = await fetch("/api/admin/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recordId, action, message }),
+        body: JSON.stringify({ recordId, action, message, ...extra }),
       });
       if (res.ok) {
         window.location.reload();
@@ -59,7 +66,14 @@ export default function AdminQueue({
 
       {rows.length === 0 && <p className="opacity-60">No submissions in this view.</p>}
 
-      {rows.map((row) => (
+      {rows.map((row) => {
+        const hoursValue = hoursDraft[row.id] ?? String(row.hours);
+        const parsedHours = Number(hoursValue);
+        const hoursValid = Number.isFinite(parsedHours) && parsedHours >= 0;
+        const hoursChanged =
+          hoursValid && Math.round(parsedHours * 10) / 10 !== Math.round(row.hours * 10) / 10;
+
+        return (
         <div key={row.id} className="card bg-base-200 p-4 gap-3">
           <div className="flex gap-4 items-start flex-wrap">
             {row.screenshotUrl && (
@@ -77,10 +91,33 @@ export default function AdminQueue({
                 Playable URL
               </a>
               {row.lapseLinks && <p>Lapse: {row.lapseLinks}</p>}
+              {row.hackatimeProjects && <p>Project: {row.hackatimeProjects}</p>}
               <p className="opacity-60">
                 {row.approved ? "Approved" : row.reviewStatus}
               </p>
             </div>
+          </div>
+
+          <div className="flex gap-2 flex-wrap items-center">
+            <label className="text-sm opacity-70">Hours</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              className="input input-bordered input-sm w-24"
+              value={hoursValue}
+              onChange={(e) => setHoursDraft((d) => ({ ...d, [row.id]: e.target.value }))}
+            />
+            <span className="text-xs opacity-60">
+              stored: {Math.round(row.hours * 10) / 10}h
+            </span>
+            <button
+              className="btn btn-sm"
+              disabled={busy === row.id || !hoursValid || !hoursChanged}
+              onClick={() => act(row.id, "hours", { hours: parsedHours })}
+            >
+              Save hours
+            </button>
           </div>
 
           <div className="flex gap-2 flex-wrap items-center">
@@ -120,7 +157,8 @@ export default function AdminQueue({
             </div>
           </details>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
