@@ -14,10 +14,11 @@ export const allShopItems: ShopItem[] = [
   { name: "One Key Keychain", price: 1, img: "/prizes/keychain_image.jpg", description: "it clicks" },
   { name: "$6.5/hr Hardware Grant", price: 1, img: "/prizes/grant_image.jpg", description: "funding to actually build out your project" },
   { name: "$5.00/hr Upgrade Grant", price: 1, img: "/prizes/grant_image.jpg", description: "lets say you want a slightly better laptop that costs 50 bucks more. you first would qualify for the laptop, n then you can use the upgrade grant to 'upgrade' ur prize further. "},
-
+  { name: "$6.5 Domain Grant", price: 1, img: "/prizes/porkbun.png", description: "buying domains is p cool" },
+  { name: "Screw driver kit", price: 1, img: "/prizes/screwdriver.png", description: "for driving screws" },
+  { name: "Caliper", price: 1, img: "/prizes/caliper.png", description: "ohh a caliper" },
   // LVL 2 CLEARANCE — 3 hours
   { name: "$20 AI Grant", price: 3, img: "/prizes/claude_vs_gemini.png", description: "we all love ai" },
-  { name: "$20 Domain Grant", price: 3, img: "/prizes/porkbun.png", description: "buying domains is p cool" },
   { name: "Four Key Macropad", price: 3, img: "/prizes/macropad_image.jpg", description: "little macropad you can actually use" },
 
   // LVL 3 CLEARANCE — 15 hours
@@ -26,6 +27,7 @@ export const allShopItems: ShopItem[] = [
   { name: "TryHackMe 6 month subscription", price: 15, img: "/prizes/tryHackMe.png", description: "get cracked at cybersec rlly quick here" },
   { name: "EPOMAKER TH99 PRO Keyboard", price: 15, img: "/prizes/creamy_keyboard.jpg", description: "my favorite keyboard by far." },
   { name: "Anker Nano Charger (100W) with USB-C Cable", price: 15, img: "/prizes/anker_image.png", description: "best charger ever" },
+  { name: "MX Master 3S", price: 12, img: "/prizes/mx_master.png", description: "best mouse ever, 80 dollar grant" },
 
   // LVL 4 CLEARANCE — 25 hours
   { name: "144Hz Curved Monitor", price: 25, img: "/prizes/minotor_pic.avif", description: "$125 dollar monitor grant for your setup" },
