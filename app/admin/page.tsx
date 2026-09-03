@@ -12,6 +12,8 @@ const TELESCREEN_BASE = "https://joe-cool.jollyy.dev/billy/overview";
 // leak into this page's payload even by accident.
 const QUEUE_FIELDS = [
   SUBMISSION_FIELDS.hackatimeId,
+  SUBMISSION_FIELDS.hackatimeProjects,
+  SUBMISSION_FIELDS.overrideHours,
   SUBMISSION_FIELDS.codeUrl,
   SUBMISSION_FIELDS.playableUrl,
   SUBMISSION_FIELDS.lapseLinks,
@@ -51,12 +53,15 @@ export default async function AdminPage({
     const screenshot = record.fields[SUBMISSION_FIELDS.screenshot] as
       | Array<{ url: string }>
       | undefined;
+    const hoursRaw = record.fields[SUBMISSION_FIELDS.overrideHours];
     return {
       id: record.id,
       telescreenLink: `${TELESCREEN_BASE}?u=${encodeURIComponent(hackatimeId)}`,
       codeUrl: String(record.fields[SUBMISSION_FIELDS.codeUrl] ?? ""),
       playableUrl: String(record.fields[SUBMISSION_FIELDS.playableUrl] ?? ""),
       lapseLinks: String(record.fields[SUBMISSION_FIELDS.lapseLinks] ?? ""),
+      hackatimeProjects: String(record.fields[SUBMISSION_FIELDS.hackatimeProjects] ?? ""),
+      hours: typeof hoursRaw === "number" ? hoursRaw : 0,
       screenshotUrl: screenshot?.[0]?.url ?? null,
       approved: Boolean(record.fields[SUBMISSION_FIELDS.approved]),
       reviewStatus: String(record.fields[SUBMISSION_FIELDS.reviewStatus] ?? "Pending"),

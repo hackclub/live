@@ -10,7 +10,7 @@ import {
 } from "../../../../src/lib/airtable";
 import { getIdentity } from "../../../../src/lib/hackclub";
 
-const ACTIONS = ["approve", "reject", "fraud"] as const;
+const ACTIONS = ["approve", "reject", "fraud", "hours"] as const;
 type Action = (typeof ACTIONS)[number];
 
 export async function POST(request: Request) {
@@ -36,6 +36,23 @@ export async function POST(request: Request) {
   }
 
   const reviewedAt = new Date().toISOString();
+
+  // "hours" is an adjustment action, not a verdict — it only rewrites the
+  // record's hours (letting a reviewer deflate an over-counted Hackatime
+  // figure before approving) and leaves Approved / Review Status untouched.
+  if (action === "hours") {
+    const hours = Number(body.hours);
+    if (!Number.isFinite(hours) || hours < 0) {
+      return NextResponse.json({ error: "invalid_hours" }, { status: 400 });
+    }
+    await updateAirtableRecord(recordId, {
+      [SUBMISSION_FIELDS.overrideHours]: Math.round(hours * 10) / 10,
+      [SUBMISSION_FIELDS.reviewedAt]: reviewedAt,
+      [SUBMISSION_FIELDS.reviewedBy]: identity.primary_email,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
   const reviewFields: Record<string, unknown> = {
     [SUBMISSION_FIELDS.reviewedAt]: reviewedAt,
     [SUBMISSION_FIELDS.reviewedBy]: identity.primary_email,
