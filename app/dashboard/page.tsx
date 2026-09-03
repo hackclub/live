@@ -133,7 +133,7 @@ export default async function DashboardPage() {
 
       <div>
         <p className="font-2 text-lg mt-4">Check out da shop</p>
-        <p className="text-xs font-2">you can pr shop items that you want <a className="link text-blue-500" href="https://github.com/hackclub/live">here.</a></p>
+        <p className="text-xs font-2">you can pr shop items that you want <a className="link text-blue-500" href="https://github.com/hackclub/live/blob/master/src/lib/shopItems.ts">here.</a></p>
 
         <Link href="/redeem" className="btn btn-secondary font-2 mt-3 w-full btn-xl">buy now!</Link>
         <p className="font-2 text-sm">i made the button extra big so you cant miss it :)</p>
