@@ -73,7 +73,28 @@ export async function getIdentity(accessToken: string): Promise<HackclubIdentity
     return null;
   }
   const data = await response.json();
-  return data.identity ?? null;
+  const identity = data.identity ?? null;
+
+  // TEMP DIAGNOSTIC (openspec add-oauth-identity-autofill, task 1.1/1.2): the
+  // exact `/api/v1/me` shape for the `address` + `birthdate` scopes isn't
+  // pinned yet. Log the full envelope so we can see where those fields land
+  // and what `verification_status` actually contains. Remove once tuned.
+  console.log(
+    "[hackclub][DIAG] /api/v1/me envelope:",
+    JSON.stringify({ topLevelKeys: Object.keys(data ?? {}), data }).slice(0, 6000),
+  );
+
+  if (!identity) return null;
+
+  // Defensive: if HCA returns address / birthdate / verification fields as
+  // siblings of `identity` (OIDC-style top-level claims) rather than inside
+  // it, fold them in so the mapper/predicates can see them either way.
+  for (const key of ["address", "addresses", "birthdate", "verification_status", "ysws_eligible"] as const) {
+    if (identity[key] === undefined && data[key] !== undefined) {
+      identity[key] = data[key];
+    }
+  }
+  return identity;
 }
 
 function firstString(...values: unknown[]): string {
@@ -164,9 +185,23 @@ export function isIdentityVerified(identity: HackclubIdentity | null): boolean {
 }
 
 export function isIdentityCompleteForSubmission(identity: HackclubIdentity | null): boolean {
-  return (
-    isIdentityVerified(identity) &&
-    mapIdentityAddress(identity) !== null &&
-    normalizeBirthdate(identity?.birthdate) !== null
-  );
+  const verified = isIdentityVerified(identity);
+  const address = mapIdentityAddress(identity);
+  const birthday = normalizeBirthdate(identity?.birthdate);
+  const complete = verified && address !== null && birthday !== null;
+
+  // TEMP DIAGNOSTIC (task 1.2): when the check fails, log exactly which of the
+  // three sub-checks failed and the raw values behind them. Remove once tuned.
+  if (!complete) {
+    console.log("[hackclub][DIAG] identity NOT complete for submission:", {
+      verified,
+      hasAddress: address !== null,
+      hasBirthday: birthday !== null,
+      verification_status: identity?.verification_status ?? null,
+      ysws_eligible: identity?.ysws_eligible ?? null,
+      rawAddress: identity?.address ?? identity?.addresses ?? null,
+      rawBirthdate: identity?.birthdate ?? null,
+    });
+  }
+  return complete;
 }
