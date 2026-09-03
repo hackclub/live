@@ -75,13 +75,13 @@ export async function getIdentity(accessToken: string): Promise<HackclubIdentity
   const data = await response.json();
   const identity = data.identity ?? null;
 
-  // TEMP DIAGNOSTIC (openspec add-oauth-identity-autofill, task 1.1/1.2): the
-  // exact `/api/v1/me` shape for the `address` + `birthdate` scopes isn't
-  // pinned yet. Log the full envelope so we can see where those fields land
-  // and what `verification_status` actually contains. Remove once tuned.
+  // TEMP DIAGNOSTIC (openspec add-oauth-identity-autofill, task 1.1/1.2):
+  // dump the ENTIRE raw /api/v1/me response, pretty-printed and untruncated,
+  // so we can see exactly which key holds the date of birth. Remove once tuned.
   console.log(
-    "[hackclub][DIAG] /api/v1/me envelope:",
-    JSON.stringify({ topLevelKeys: Object.keys(data ?? {}), data }).slice(0, 6000),
+    "\n===== [hackclub][DIAG] RAW /api/v1/me response BEGIN =====\n" +
+      JSON.stringify(data, null, 2) +
+      "\n===== [hackclub][DIAG] RAW /api/v1/me response END =====\n",
   );
 
   if (!identity) return null;
