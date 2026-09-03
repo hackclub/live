@@ -458,11 +458,24 @@ export async function listSubmissionsCreatedAfter(
   const config = submissionTableConfig();
   const fields = [SUBMISSION_FIELDS.githubUsername, SUBMISSION_FIELDS.overrideHours];
 
+  // `sinceIso` ends up interpolated into a filterByFormula string, so it is
+  // never trusted verbatim: re-parse it to a canonical ISO timestamp and
+  // reject anything else. This keeps arbitrary formula text out of the
+  // query even if a caller forgets to validate.
+  let safeSince: string | null = null;
+  if (sinceIso !== null && sinceIso !== "") {
+    const parsed = Date.parse(sinceIso);
+    if (Number.isNaN(parsed)) {
+      throw new Error("listSubmissionsCreatedAfter: `sinceIso` is not a valid timestamp");
+    }
+    safeSince = new Date(parsed).toISOString();
+  }
+
   let records: AirtableRecord[] = [];
   let offset: string | undefined;
   do {
     const params = new URLSearchParams();
-    if (sinceIso) params.set("filterByFormula", `IS_AFTER(CREATED_TIME(), '${sinceIso}')`);
+    if (safeSince) params.set("filterByFormula", `IS_AFTER(CREATED_TIME(), '${safeSince}')`);
     for (const field of fields) params.append("fields[]", field);
     params.set("pageSize", "100");
     if (offset) params.set("offset", offset);
@@ -478,7 +491,7 @@ export async function listSubmissionsCreatedAfter(
     (a, b) => new Date(a.createdTime ?? 0).getTime() - new Date(b.createdTime ?? 0).getTime(),
   );
 
-  if (!sinceIso && opts.maxRecords) {
+  if (!safeSince && opts.maxRecords) {
     return records.slice(-opts.maxRecords);
   }
   return records;
