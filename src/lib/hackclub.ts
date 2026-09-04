@@ -25,6 +25,7 @@ export type HackclubIdentity = {
   verification_status?: string;
   ysws_eligible?: boolean;
   birthdate?: string;
+  birthday?: string;
   address?: unknown;
   addresses?: unknown;
 };
@@ -94,6 +95,14 @@ export async function getIdentity(accessToken: string): Promise<HackclubIdentity
       identity[key] = data[key];
     }
   }
+
+  // HCA's actual `/api/v1/me` response names the date-of-birth field
+  // `birthday`, not `birthdate` (the OIDC-style name this app was written
+  // against). Fold it in so normalizeBirthdate keeps working off `birthdate`.
+  if (identity.birthdate === undefined && identity.birthday !== undefined) {
+    identity.birthdate = identity.birthday;
+  }
+
   return identity;
 }
 
