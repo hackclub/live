@@ -20,6 +20,8 @@ export const allShopItems: ShopItem[] = [
   { name: "$20 Domain Grant", price: 3, img: "/prizes/porkbun.png", description: "buying domains is p cool" },
   { name: "Four Key Macropad", price: 3, img: "/prizes/macropad_image.jpg", description: "little macropad you can actually use" },
 
+  { name: "$35 Codédex Grant", price: 7, img: "/prizes/codedex_grant.png", description: "$35 toward a Codédex subscription to learn and practice coding" },
+
   // LVL 3 CLEARANCE — 15 hours
   // { name: "Casio Watch", price: 15, img: "/prizes/casio_image.jpg", description: "buy yourself a watch up to 100 dollars worth" },
   { name: "ProtonMe 1 year subscription", price: 15, img: "/prizes/protonMe.jpg", description: "we all love privacy and stuff" },
