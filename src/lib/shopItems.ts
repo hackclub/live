@@ -18,6 +18,7 @@ export const allShopItems: ShopItem[] = [
   // LVL 2 CLEARANCE — 3 hours
   { name: "$20 AI Grant", price: 3, img: "/prizes/claude_vs_gemini.png", description: "we all love ai" },
   { name: "$20 Domain Grant", price: 3, img: "/prizes/porkbun.png", description: "buying domains is p cool" },
+  { name: "$20 Peripheral Grant", price: 3, img: "/prizes/peripheral_grant.png", description: "$20 to buy a computer peripheral" },
   { name: "Four Key Macropad", price: 3, img: "/prizes/macropad_image.jpg", description: "little macropad you can actually use" },
 
   // LVL 3 CLEARANCE — 15 hours
