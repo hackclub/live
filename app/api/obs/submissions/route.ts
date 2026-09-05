@@ -7,7 +7,15 @@ export const dynamic = "force-dynamic";
 const BACKFILL_MAX_RECORDS = 20;
 
 export async function GET(request: Request) {
-  const since = new URL(request.url).searchParams.get("since");
+  // `since` is echoed straight into an Airtable filterByFormula downstream,
+  // so anything that isn't a real timestamp is dropped here rather than
+  // trusted — a non-date value would otherwise be a formula-injection
+  // vector on this unauthenticated endpoint.
+  const rawSince = new URL(request.url).searchParams.get("since");
+  const since =
+    rawSince && !Number.isNaN(Date.parse(rawSince))
+      ? new Date(rawSince).toISOString()
+      : null;
 
   const records = await listSubmissionsCreatedAfter(
     since,

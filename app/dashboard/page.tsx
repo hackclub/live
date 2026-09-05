@@ -1,19 +1,29 @@
 import { requireSession } from "../../src/lib/auth";
 import {
+  countPaidReferralsForHandle,
   getPersonalApprovedHours,
+  getReferralByRefereeEmail,
   listMessagesBySubmissionIds,
   listRedemptionsByEmail,
   listSubmissionsByEmail,
   REDEMPTION_FIELDS,
+  REFERRAL_FIELDS,
   SUBMISSION_FIELDS,
+  upsertReferralResolution,
 } from "../../src/lib/airtable";
-import { getIdentity } from "../../src/lib/hackclub";
+import {
+  getIdentity,
+  isIdentityCompleteForSubmission,
+  mapIdentityAddress,
+  normalizeBirthdate,
+} from "../../src/lib/hackclub";
 import Link from "next/link";
 import Footer from "../components/Footer";
 import { getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "../../src/lib/hackatime";
 import SubmissionForm from "../components/dashboard/SubmissionForm";
 import SubmissionsList, { type OwnSubmission } from "../components/dashboard/SubmissionsList";
 import PurchasedPrizes, { type Redemption } from "../components/dashboard/PurchasedPrizes";
+import ReferralPanel from "../components/dashboard/ReferralPanel";
 
 export default async function DashboardPage() {
   // Redirects to /api/auth/login or /api/auth/hackatime/login if either
@@ -48,7 +58,44 @@ export default async function DashboardPage() {
     .filter((p) => !p.archived)
     .map((p) => ({ name: p.name, hours: trackedHoursForProject(p) }));
 
+  // Address + birthday are authoritative from the HCA identity — used for both
+  // the new-submission form and every resubmission, in place of whatever an
+  // older record happened to store.
+  const identityComplete = isIdentityCompleteForSubmission(identity);
+  const mappedAddress = mapIdentityAddress(identity);
+  const identityDefaults = {
+    addressLine1: mappedAddress?.addressLine1 ?? "",
+    addressLine2: mappedAddress?.addressLine2 ?? "",
+    city: mappedAddress?.city ?? "",
+    state: mappedAddress?.state ?? "",
+    country: mappedAddress?.country ?? "",
+    zip: mappedAddress?.zip ?? "",
+    birthday: normalizeBirthdate(identity.birthdate) ?? "",
+  };
+
   const messagesBySubmission = await listMessagesBySubmissionIds(ownRecords.map((r) => r.id));
+
+  // Referral section: keep the handle -> email map fresh, then read this
+  // user's own referrer (if any) and how many people they've referred who
+  // shipped. All best-effort — a missing Referrals table shouldn't 500 the
+  // dashboard.
+  const githubUsername = hackatimeMe?.github_username?.trim() || "";
+  const [referralRow, referredCount] = await Promise.all([
+    getReferralByRefereeEmail(identity.primary_email).catch(() => null),
+    githubUsername
+      ? countPaidReferralsForHandle(githubUsername).catch(() => 0)
+      : Promise.resolve(0),
+  ]);
+  if (githubUsername) {
+    try {
+      await upsertReferralResolution(githubUsername, identity.primary_email);
+    } catch (err) {
+      console.warn("[referral] upsertReferralResolution failed", err);
+    }
+  }
+  const referrerHandle = referralRow
+    ? String(referralRow.fields[REFERRAL_FIELDS.referrerHandle] ?? "") || null
+    : null;
 
   const submissions: OwnSubmission[] = ownRecords.map((record) => {
       const hackatimeProjectName = String(record.fields[SUBMISSION_FIELDS.hackatimeProjects] ?? "");
@@ -64,13 +111,7 @@ export default async function DashboardPage() {
         messages: messagesBySubmission.get(record.id) ?? [],
         defaults: {
           description: String(record.fields[SUBMISSION_FIELDS.description] ?? ""),
-          addressLine1: String(record.fields[SUBMISSION_FIELDS.addressLine1] ?? ""),
-          addressLine2: String(record.fields[SUBMISSION_FIELDS.addressLine2] ?? ""),
-          city: String(record.fields[SUBMISSION_FIELDS.city] ?? ""),
-          state: String(record.fields[SUBMISSION_FIELDS.state] ?? ""),
-          country: String(record.fields[SUBMISSION_FIELDS.country] ?? ""),
-          zip: String(record.fields[SUBMISSION_FIELDS.zip] ?? ""),
-          birthday: String(record.fields[SUBMISSION_FIELDS.birthday] ?? ""),
+          ...identityDefaults,
           hardwareHours: hackatimeProjectName ? "" : String(record.fields[SUBMISSION_FIELDS.overrideHours] ?? ""),
         },
       };
@@ -100,7 +141,7 @@ export default async function DashboardPage() {
             <p>You have {personalHours.toFixed(1)} tokens. lock in to earn some</p>  
             </> : 
             <div className="font-2 flex flex-row items-center gap-2">
-              <p>You have {personalHours.toFixed(1)} tokens. let's go </p>
+              <p>You have {personalHours.toFixed(1)} tokens. let&apos;s go </p>
               <Link className="link text-blue-500" href="/redeem">spend em!</Link>
             </div>
             
@@ -119,7 +160,7 @@ export default async function DashboardPage() {
 
       <div>
         <p className="font-2 text-lg mt-4">Check out da shop</p>
-        <p className="text-xs font-2">you can pr shop items that you want <a className="link text-blue-500" href="https://github.com/hackclub/live">here.</a></p>
+        <p className="text-xs font-2">you can pr shop items that you want <a className="link text-blue-500" href="https://github.com/hackclub/live/blob/master/src/lib/shopItems.ts">here.</a></p>
 
         <Link href="/redeem" className="btn btn-secondary font-2 mt-3 w-full btn-xl">buy now!</Link>
         <p className="font-2 text-sm">i made the button extra big so you cant miss it :)</p>
@@ -129,11 +170,36 @@ export default async function DashboardPage() {
         <p className="font-2 text-lg">Your Prizes</p>
         <PurchasedPrizes redemptions={redemptions} />
       </div>
+
+      <ReferralPanel
+        handle={githubUsername}
+        referrerHandle={referrerHandle}
+        hasSubmissions={ownRecords.length > 0}
+        referredCount={referredCount}
+      />
         </section>
 
         <section className="mx-auto flex flex-col gap-4">
           <p className="text-2xl font-2">submit a new project</p>
-          <SubmissionForm githubUsername={hackatimeMe?.github_username ?? ""} hackatimeProjects={projectOptions} />
+          {identityComplete ? (
+            <SubmissionForm
+              githubUsername={hackatimeMe?.github_username ?? ""}
+              hackatimeProjects={projectOptions}
+              defaults={identityDefaults}
+            />
+          ) : (
+            <div className="bg-base-200 border border-warning p-4 font-2 flex flex-col gap-2">
+              <p className="font-bold">Finish verifying your Hack Club identity first</p>
+              <p className="text-sm">
+                Submissions pull your shipping address and birthday straight from your
+                verified Hack Club identity. Yours isn&apos;t complete yet — verify it at{" "}
+                <a className="link text-blue-500" href="https://identity.hackclub.com" target="_blank" rel="noreferrer">
+                  identity.hackclub.com
+                </a>
+                , then reload this page to submit.
+              </p>
+            </div>
+          )}
         </section>
       </div>
 

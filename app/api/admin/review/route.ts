@@ -3,14 +3,16 @@ import { getSessionFromRequest } from "../../../../src/lib/auth";
 import { isAdminEmail } from "../../../../src/lib/admin";
 import {
   createMessage,
+  getSubmissionById,
   MESSAGE_SENDER,
   REVIEW_STATUS,
   SUBMISSION_FIELDS,
   updateAirtableRecord,
 } from "../../../../src/lib/airtable";
 import { getIdentity } from "../../../../src/lib/hackclub";
+import { payReferral } from "../../../../src/lib/referral";
 
-const ACTIONS = ["approve", "reject", "fraud"] as const;
+const ACTIONS = ["approve", "reject", "fraud", "hours"] as const;
 type Action = (typeof ACTIONS)[number];
 
 export async function POST(request: Request) {
@@ -36,6 +38,23 @@ export async function POST(request: Request) {
   }
 
   const reviewedAt = new Date().toISOString();
+
+  // "hours" is an adjustment action, not a verdict — it only rewrites the
+  // record's hours (letting a reviewer deflate an over-counted Hackatime
+  // figure before approving) and leaves Approved / Review Status untouched.
+  if (action === "hours") {
+    const hours = Number(body.hours);
+    if (!Number.isFinite(hours) || hours < 0) {
+      return NextResponse.json({ error: "invalid_hours" }, { status: 400 });
+    }
+    await updateAirtableRecord(recordId, {
+      [SUBMISSION_FIELDS.overrideHours]: Math.round(hours * 10) / 10,
+      [SUBMISSION_FIELDS.reviewedAt]: reviewedAt,
+      [SUBMISSION_FIELDS.reviewedBy]: identity.primary_email,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
   const reviewFields: Record<string, unknown> = {
     [SUBMISSION_FIELDS.reviewedAt]: reviewedAt,
     [SUBMISSION_FIELDS.reviewedBy]: identity.primary_email,
@@ -61,6 +80,24 @@ export async function POST(request: Request) {
       sender: MESSAGE_SENDER.admin,
       message,
     });
+  }
+
+  // Referral payout: if this approved submission's submitter was referred,
+  // grant the referrer one free water balloon. Idempotent and best-effort —
+  // never fails the review action.
+  if (action === "approve") {
+    try {
+      const submission = await getSubmissionById(recordId);
+      const submitterEmail = String(submission?.fields[SUBMISSION_FIELDS.email] ?? "");
+      if (submitterEmail) {
+        const outcome = await payReferral(submitterEmail, recordId);
+        if (outcome !== "skipped") {
+          console.log(`[referral] payout for ${submitterEmail} on approve: ${outcome}`);
+        }
+      }
+    } catch (err) {
+      console.error("[referral] payout on approve failed", err);
+    }
   }
 
   return NextResponse.json({ ok: true });
