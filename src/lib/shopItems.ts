@@ -19,7 +19,7 @@ export const allShopItems: ShopItem[] = [
   { name: "$20 AI Grant", price: 3, img: "/prizes/claude_vs_gemini.png", description: "we all love ai" },
   { name: "$20 Domain Grant", price: 3, img: "/prizes/porkbun.png", description: "buying domains is p cool" },
   { name: "Four Key Macropad", price: 3, img: "/prizes/macropad_image.jpg", description: "little macropad you can actually use" },
-
+  { name: "$20 PC Peripherals Grant", price: 3, img: "/prizes/pc_peripherals.jpg", description: "grant for a mouse, keyboard, or peripheral upgrade" },
   // LVL 3 CLEARANCE — 15 hours
   // { name: "Casio Watch", price: 15, img: "/prizes/casio_image.jpg", description: "buy yourself a watch up to 100 dollars worth" },
   { name: "ProtonMe 1 year subscription", price: 15, img: "/prizes/protonMe.jpg", description: "we all love privacy and stuff" },
