@@ -17,7 +17,7 @@ export const allShopItems: ShopItem[] = [
 
   // LVL 2 CLEARANCE — 3 hours
   { name: "$20 AI Grant", price: 3, img: "/prizes/claude_vs_gemini.png", description: "we all love ai" },
-  { name: "$20 Apple Music/Spotify Grant", price: 3, img: "/prizes/claude_vs_gemini.png", description: "music :)" },
+  { name: "$20 Apple Music/Spotify Grant", price: 3, img: "/prizes/music_grant.png", description: "music :)" },
   { name: "$20 Domain Grant", price: 3, img: "/prizes/porkbun.png", description: "buying domains is p cool" },
   { name: "Four Key Macropad", price: 3, img: "/prizes/macropad_image.jpg", description: "little macropad you can actually use" },
 
