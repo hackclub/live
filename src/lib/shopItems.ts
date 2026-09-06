@@ -16,11 +16,11 @@ export const allShopItems: ShopItem[] = [
   { name: "2 hours for 5 pushups (stackable)", price: 2, img: "/prizes/pushups.jpg", description: "make the man suffer" },
   { name: "Random piece of paper from HQ", price: 2, img: "/prizes/paper.jpg", description: "who knows what it could be" },
   { name: "Hosting Credits", price: 2, img: "/prizes/hosting.png", description: "deploy your projects, 10$ grant" },
-{ name: "$35 Codédex Grant", price: 7, img: "/prizes/codedex_grant.png", description: "$35 toward a Codédex subscription to learn and practice coding" },
+  { name: "$35 Codédex Grant", price: 7, img: "/prizes/codedex_grant.png", description: "$35 toward a Codédex subscription to learn and practice coding" },
 
 
   // LVL 3 CLEARANCE — 15 hours
-  // { name: "Casio Watch", price: 15, img: "/prizes/casio_image.jpg", description: "buy yourself a watch up to 100 dollars worth" },
+  { name: "Casio Watch", price: 15, img: "/prizes/casio_image.jpg", description: "buy yourself a watch up to 100 dollars worth" },
   { name: "ProtonMe 1 year subscription", price: 15, img: "/prizes/protonMe.jpg", description: "we all love privacy and stuff" },
   { name: "wake up archer in middle of night (and record it)", price: 15, img: "/prizes/archer_awakened.jpg", description: "wakey wakey archer" },
   { name: "ProtonMe 1 year subscription", price: 18, img: "/prizes/protonMe.jpg", description: "we all love privacy and stuff" },
