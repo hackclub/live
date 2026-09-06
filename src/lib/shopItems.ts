@@ -27,6 +27,7 @@ export const allShopItems: ShopItem[] = [
   { name: "TryHackMe 6 month subscription", price: 15, img: "/prizes/tryHackMe.png", description: "get cracked at cybersec rlly quick here" },
   { name: "EPOMAKER TH99 PRO Keyboard", price: 15, img: "/prizes/creamy_keyboard.jpg", description: "my favorite keyboard by far." },
   { name: "Anker Nano Charger (100W) with USB-C Cable", price: 15, img: "/prizes/anker_image.png", description: "best charger ever" },
+  { name: "$100 Laptop Grant", price: 20, img: "/prizes/pc_grant.png", description: "$100 pc grant" },
 
   // LVL 4 CLEARANCE — 25 hours
   { name: "144Hz Curved Monitor", price: 25, img: "/prizes/minotor_pic.avif", description: "$125 dollar monitor grant for your setup" },
