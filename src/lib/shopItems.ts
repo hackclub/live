@@ -14,14 +14,14 @@ export const allShopItems: ShopItem[] = [
 
   // ===== 2 HOURS =====
   { name: "2 hours for 5 pushups (stackable)", price: 2, img: "/prizes/pushups.jpg", description: "make the man suffer" },
-  { name: "Random piece of paper from HQ", price: 2, img: "/prizes/paper.jpg", description: "who knows what it could be" },
+  { name: "Random piece of paper from HQ", price: 4, img: "/prizes/paper.jpg", description: "who knows what it could be" },
   { name: "Hosting Credits", price: 2, img: "/prizes/hosting.png", description: "deploy your projects, 10$ grant" },
-{ name: "$35 Codédex Grant", price: 7, img: "/prizes/codedex_grant.png", description: "$35 toward a Codédex subscription to learn and practice coding" },
+{ name: "$35 Codédex Grant", price: 8, img: "/prizes/codedex_grant.png", description: "$35 toward a Codédex subscription to learn and practice coding" },
 
 
   // ===== 4 HOURS =====
   { name: "$20 Domain Grant", price: 4, img: "/prizes/porkbun.png", description: "buying domains is p cool" },
-  { name: "PineCil Soldering Iron", price: 4, img: "/prizes/pinecil.jpg", description: "precision soldering for hardware projects" },
+  { name: "PineCil Soldering Iron", price: 5, img: "/prizes/pinecil.jpg", description: "precision soldering for hardware projects" },
 
   // ===== 5 HOURS =====
   { name: "eat half a lemon", price: 5, img: "/prizes/lemon_eating.jpeg", description: "you grind, i suffer" },
@@ -30,10 +30,10 @@ export const allShopItems: ShopItem[] = [
   { name: "$20 AI Grant", price: 6, img: "/prizes/claude_vs_gemini.png", description: "we all love ai" },
 
   // ===== 3 HOURS =====
-  { name: "Hot Plate", price: 3, img: "/prizes/hot_plate.jpg", description: "make ramen while you code" },
+  { name: "Hot Plate", price: 4, img: "/prizes/hot_plate.jpg", description: "make ramen while you code" },
 
   // ===== 6 HOURS =====
-  { name: "BLÅHAJ", price: 8, img: "/prizes/blahaj.jpg", description: "big big big" },
+  { name: "BLÅHAJ", price: 6, img: "/prizes/blahaj.jpg", description: "big big big" },
   { name: "BAOFENG UV-9R ", price: 6, img: "/prizes/baofengUV9R.jpg", description: "Dual-band handheld radio — UHF/VHF for staying in touch (or just vibing on the airwaves)" },
   // ===== 13 HOURS =====
   { name: "TryHackMe 6 month subscription", price: 13, img: "/prizes/tryHackMe.png", description: "get cracked at cybersec rlly quick here" },
@@ -43,12 +43,12 @@ export const allShopItems: ShopItem[] = [
 
   // LVL 3 CLEARANCE — 15 hours
   // { name: "Casio Watch", price: 15, img: "/prizes/casio_image.jpg", description: "buy yourself a watch up to 100 dollars worth" },
-  { name: "ProtonMe 1 year subscription", price: 15, img: "/prizes/protonMe.jpg", description: "we all love privacy and stuff" },
+  //{ name: "ProtonMe 1 year subscription", price: 15, img: "/prizes/protonMe.jpg", description: "we all love privacy and stuff" },
   { name: "wake up archer in middle of night (and record it)", price: 15, img: "/prizes/archer_awakened.jpg", description: "wakey wakey archer" },
   { name: "ProtonMe 1 year subscription", price: 18, img: "/prizes/protonMe.jpg", description: "we all love privacy and stuff" },
   { name: "EPOMAKER TH99 PRO Keyboard", price: 15, img: "/prizes/creamy_keyboard.jpg", description: "my favorite keyboard by far." },
-  { name: "Anker Nano Charger (100W) with USB-C Cable", price: 15, img: "/prizes/anker_image.png", description: "best charger ever" },
-  { name: "One Key Keychain", price: 2, img: "/prizes/keychain_image.jpg", description: "CLICKY CLICKY CLICKY" },
+  { name: "Anker Nano Charger (100W) with USB-C Cable", price: 17, img: "/prizes/anker_image.png", description: "best charger ever" },
+  { name: "One Key Keychain", price: 3, img: "/prizes/keychain_image.jpg", description: "CLICKY CLICKY CLICKY" },
   { name: "Four Key Macropad", price: 4, img: "/prizes/macropad_image.jpg", description: "little macropad you can actually use" },
 
   // ===== 17 HOURS =====
