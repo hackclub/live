@@ -16,7 +16,8 @@ export const allShopItems: ShopItem[] = [
   { name: "2 hours for 5 pushups (stackable)", price: 2, img: "/prizes/pushups.jpg", description: "make the man suffer" },
   { name: "Random piece of paper from HQ", price: 2, img: "/prizes/paper.jpg", description: "who knows what it could be" },
   { name: "Hosting Credits", price: 2, img: "/prizes/hosting.png", description: "deploy your projects, 10$ grant" },
-{ name: "$35 Codédex Grant", price: 7, img: "/prizes/codedex_grant.png", description: "$35 toward a Codédex subscription to learn and practice coding" },
+  { name: "$35 Codédex Grant", price: 7, img: "/prizes/codedex_grant.png", description: "$35 toward a Codédex subscription to learn and practice coding" },
+  { name: "$60 PC Desk Grant (stackable)", price: 12, img: "/prizes/pc_desk.png", description: "$60 towards buying a new PC/Laptop desk, covers any nominal expert assembly costs asw!"},
 
 
   // LVL 3 CLEARANCE — 15 hours
