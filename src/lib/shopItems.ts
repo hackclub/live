@@ -19,6 +19,28 @@ export const allShopItems: ShopItem[] = [
 { name: "$35 Codédex Grant", price: 7, img: "/prizes/codedex_grant.png", description: "$35 toward a Codédex subscription to learn and practice coding" },
 
 
+  // ===== 4 HOURS =====
+  { name: "$20 Domain Grant", price: 4, img: "/prizes/porkbun.png", description: "buying domains is p cool" },
+  { name: "PineCil Soldering Iron", price: 4, img: "/prizes/pinecil.jpg", description: "precision soldering for hardware projects" },
+
+  // ===== 5 HOURS =====
+  { name: "eat half a lemon", price: 5, img: "/prizes/lemon_eating.jpeg", description: "you grind, i suffer" },
+  { name: "10 hours for me to eat the spiciest chip", price: 10, img: "/prizes/spicy_chip.jpg", description: "pain is temporary, glory is forever" },
+  { name: "Play Console Developer", price: 5, img: "/prizes/play_console.png", description: "publish android apps" },
+  { name: "$20 AI Grant", price: 6, img: "/prizes/claude_vs_gemini.png", description: "we all love ai" },
+
+  // ===== 3 HOURS =====
+  { name: "Hot Plate", price: 3, img: "/prizes/hot_plate.jpg", description: "make ramen while you code" },
+
+  // ===== 6 HOURS =====
+  { name: "BLÅHAJ", price: 8, img: "/prizes/blahaj.jpg", description: "big big big" },
+  { name: "BAOFENG UV-9R ", price: 6, img: "/prizes/baofengUV9R.jpg", description: "Dual-band handheld radio — UHF/VHF for staying in touch (or just vibing on the airwaves)" },
+  // ===== 13 HOURS =====
+  { name: "TryHackMe 6 month subscription", price: 13, img: "/prizes/tryHackMe.png", description: "get cracked at cybersec rlly quick here" },
+
+  // ===== 15 HOURS =====
+  { name: "eat a spoon of vegemite", price: 15, img: "/prizes/vegemite.jpg", description: "ausr*lia" },
+
   // LVL 3 CLEARANCE — 15 hours
   // { name: "Casio Watch", price: 15, img: "/prizes/casio_image.jpg", description: "buy yourself a watch up to 100 dollars worth" },
   { name: "ProtonMe 1 year subscription", price: 15, img: "/prizes/protonMe.jpg", description: "we all love privacy and stuff" },
