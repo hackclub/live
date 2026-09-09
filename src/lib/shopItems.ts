@@ -11,6 +11,7 @@ export const allShopItems: ShopItem[] = [
   { name: "Chrome Web Store Developer Grant", price: 1, img: "/prizes/chrome_web_store.png", description: "publish to the chrome web store" },
   { name: "$6.5/hr Hardware Grant", price: 1, img: "/prizes/grant_image.jpg", description: "funding to actually build out your project" },
   { name: "$5.00/hr Upgrade Grant", price: 1, img: "/prizes/grant_image.jpg", description: "lets say you want a slightly better laptop that costs 50 bucks more. you first would qualify for the laptop, n then you can use the upgrade grant to 'upgrade' ur prize further." },
+  { name: "Caliper", price: 2, img: "/prizes/caliper.jpg", description: "measure stuff" },
 
   // ===== 2 HOURS =====
   { name: "2 hours for 5 pushups (stackable)", price: 2, img: "/prizes/pushups.jpg", description: "make the man suffer" },
@@ -34,7 +35,7 @@ export const allShopItems: ShopItem[] = [
   { name: "Anker Nano Charger (100W) with USB-C Cable", price: 17, img: "/prizes/anker_image.png", description: "best charger ever" },
   { name: "One Key Keychain", price: 3, img: "/prizes/keychain_image.jpg", description: "CLICKY CLICKY CLICKY" },
   { name: "Four Key Macropad", price: 4, img: "/prizes/macropad_image.jpg", description: "little macropad you can actually use" },
-
+  { name: "$70 MX Master 3S Grant", price: 12, img: "/prizes/mouse.png", description: "$70 for mx master 3s" },
   // ===== 17 HOURS =====
   { name: "YubiKey 5C NFC", price: 20, img: "/prizes/yubikey.jpg", description: "secure your shi" },
 
