@@ -11,7 +11,7 @@ export const allShopItems: ShopItem[] = [
   { name: "Chrome Web Store Developer Grant", price: 1, img: "/prizes/chrome_web_store.png", description: "publish to the chrome web store" },
   { name: "$6.5/hr Hardware Grant", price: 1, img: "/prizes/grant_image.jpg", description: "funding to actually build out your project" },
   { name: "$5.00/hr Upgrade Grant", price: 1, img: "/prizes/grant_image.jpg", description: "lets say you want a slightly better laptop that costs 50 bucks more. you first would qualify for the laptop, n then you can use the upgrade grant to 'upgrade' ur prize further." },
-  { name: "Caliper", price: 2, img: "/prizes/caliper.jpg", description: "measure stuff" },
+  { name: "Caliper", price: 2, img: "/prizes/caliper.png", description: "measure stuff" },
 
   // ===== 2 HOURS =====
   { name: "2 hours for 5 pushups (stackable)", price: 2, img: "/prizes/pushups.jpg", description: "make the man suffer" },
