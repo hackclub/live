@@ -36,6 +36,7 @@ export const allShopItems: ShopItem[] = [
   { name: "One Key Keychain", price: 3, img: "/prizes/keychain_image.jpg", description: "CLICKY CLICKY CLICKY" },
   { name: "$20 AI Grant", price: 3, img:"/prizes/ai_grant.png", description: "for all your ai needs..."},
   { name: "Four Key Macropad", price: 4, img: "/prizes/macropad_image.jpg", description: "little macropad you can actually use" },
+  { name: "MSI MAG A650GL PSU", price: 15, img: "/prizes/PSU.jpg", description: "The MSI MAG A650GL Power Supply Unit, 650W, 80 Plus Gold, multiple generations GPU Support, Fully Modular,120mm FDB fan, Black Flat Cables, 7 Year Warranty" },
   
   // ===== 17 HOURS =====
   { name: "YubiKey 5C NFC", price: 20, img: "/prizes/yubikey.jpg", description: "secure your shi" },
