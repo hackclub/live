@@ -1,7 +1,7 @@
 import { requireSession } from "../../src/lib/auth";
 import { getIdentity } from "../../src/lib/hackclub";
 import { getTokenBalance } from "../../src/lib/airtable";
-import { allShopItems } from "../../src/lib/shopItems";
+import { shopItemsByPriceAsc } from "../../src/lib/shopItems";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import RedeemCatalog from "../components/RedeemCatalog";
@@ -25,7 +25,7 @@ export default async function Redeem() {
       <Navbar />
 
       <section className="w-4/6 font-2 mx-auto min-h-screen">
-        <RedeemCatalog items={allShopItems} initialBalance={balance} />
+        <RedeemCatalog items={shopItemsByPriceAsc} initialBalance={balance} />
       </section>
 
       <Footer />

@@ -34,6 +34,7 @@ export const allShopItems: ShopItem[] = [
   { name: "EPOMAKER TH99 PRO Keyboard", price: 15, img: "/prizes/creamy_keyboard.jpg", description: "my favorite keyboard by far." },
   { name: "Anker Nano Charger (100W) with USB-C Cable", price: 17, img: "/prizes/anker_image.png", description: "best charger ever" },
   { name: "One Key Keychain", price: 3, img: "/prizes/keychain_image.jpg", description: "CLICKY CLICKY CLICKY" },
+  { name: "$20 AI Grant", price: 3, img:"/prizes/ai_grant.png", description: "for all your ai needs..."},
   { name: "Four Key Macropad", price: 4, img: "/prizes/macropad_image.jpg", description: "little macropad you can actually use" },
   { name: "$70 MX Master 3S Grant", price: 12, img: "/prizes/mouse.png", description: "$70 for mx master 3s" },
   // ===== 17 HOURS =====
@@ -99,3 +100,7 @@ export const allShopItems: ShopItem[] = [
 export function findShopItemByName(name: string): ShopItem | undefined {
   return allShopItems.find((item) => item.name === name);
 }
+
+export const shopItemsByPriceAsc: ShopItem[] = [...allShopItems].sort(
+  (a, b) => a.price - b.price,
+);
