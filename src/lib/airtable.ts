@@ -285,6 +285,36 @@ export async function getPersonalApprovedHours(email: string): Promise<number> {
   }, 0);
 }
 
+// Approved submissions for one person, created before a given timestamp —
+// the "balance snapshot" behind an admin-facing redemption row. This is a
+// reconstruction, not a stored value: hours are never earmarked to a
+// specific redemption anywhere in this codebase (see getTokenBalance).
+export async function listApprovedSubmissionsBeforeForEmail(
+  email: string,
+  beforeIso: string,
+): Promise<AirtableRecord[]> {
+  const config = submissionTableConfig();
+  const escaped = email.replace(/'/g, "\\'");
+  const parsed = Date.parse(beforeIso);
+  if (Number.isNaN(parsed)) {
+    throw new Error("listApprovedSubmissionsBeforeForEmail: `beforeIso` is not a valid timestamp");
+  }
+  const safeBefore = new Date(parsed).toISOString();
+  const params = new URLSearchParams();
+  params.set(
+    "filterByFormula",
+    `AND({${SUBMISSION_FIELDS.email}} = '${escaped}', {${SUBMISSION_FIELDS.approved}} = TRUE(), IS_BEFORE(CREATED_TIME(), '${safeBefore}'))`,
+  );
+  // Only what's needed to render a snapshot row — no address/birthday/email.
+  for (const field of [SUBMISSION_FIELDS.hackatimeProjects, SUBMISSION_FIELDS.overrideHours]) {
+    params.append("fields[]", field);
+  }
+  const data = await airtableRequest<{ records: AirtableRecord[] }>(config, `?${params.toString()}`);
+  return data.records.sort(
+    (a, b) => new Date(a.createdTime ?? 0).getTime() - new Date(b.createdTime ?? 0).getTime(),
+  );
+}
+
 // Sums Cost across one person's Redemptions records — the "spent" side of
 // their token balance, paired with getPersonalApprovedHours' "earned" side.
 export async function sumRedeemedCost(email: string): Promise<number> {
@@ -311,6 +341,28 @@ export async function sumRedeemedCost(email: string): Promise<number> {
   return total;
 }
 
+// Every redemption across every user — for the admin purchases dashboard.
+// Same offset-loop shape as sumRedeemedCost, but unfiltered.
+export async function listAllRedemptions(): Promise<AirtableRecord[]> {
+  const config = redemptionsTableConfig();
+  const records: AirtableRecord[] = [];
+  let offset: string | undefined;
+  do {
+    const params = new URLSearchParams();
+    params.set("pageSize", "100");
+    if (offset) params.set("offset", offset);
+    const data = await airtableRequest<{ records: AirtableRecord[]; offset?: string }>(
+      config,
+      `?${params.toString()}`,
+    );
+    records.push(...data.records);
+    offset = data.offset;
+  } while (offset);
+  return records.sort(
+    (a, b) => new Date(b.createdTime ?? 0).getTime() - new Date(a.createdTime ?? 0).getTime(),
+  );
+}
+
 // Full redemption history for one person — the "what did I actually buy"
 // counterpart to sumRedeemedCost's running total, newest first.
 export async function listRedemptionsByEmail(email: string): Promise<AirtableRecord[]> {
@@ -335,6 +387,18 @@ export async function listRedemptionsByEmail(email: string): Promise<AirtableRec
   return records.sort(
     (a, b) => new Date(b.createdTime ?? 0).getTime() - new Date(a.createdTime ?? 0).getTime(),
   );
+}
+
+// Used by the admin purchases snapshot route to look up a redemption's email
+// + redeemedAt server-side, so the client never has to send email back to
+// the server to ask for a balance snapshot.
+export async function getRedemptionById(recordId: string): Promise<AirtableRecord | null> {
+  const config = redemptionsTableConfig();
+  try {
+    return await airtableRequest<AirtableRecord>(config, `/${recordId}`);
+  } catch {
+    return null;
+  }
 }
 
 export async function createRedemption({
@@ -385,6 +449,30 @@ export async function listSubmissions(
   const query = params.toString() ? `?${params.toString()}` : "";
   const data = await airtableRequest<{ records: AirtableRecord[] }>(config, query);
   return data.records;
+}
+
+// email -> { firstName, githubUsername } for admin-dashboard display only.
+// Restricted via fields[] at the query level (same guarantee documented on
+// listSubmissions) so email/address/birthday never leave Airtable through
+// this helper, even transiently.
+export async function resolveDisplayIdentityByEmail(
+  email: string,
+): Promise<{ firstName: string; githubUsername: string } | null> {
+  const config = submissionTableConfig();
+  const escaped = email.replace(/'/g, "\\'");
+  const params = new URLSearchParams();
+  params.set("filterByFormula", `{${SUBMISSION_FIELDS.email}} = '${escaped}'`);
+  params.set("maxRecords", "1");
+  for (const field of [SUBMISSION_FIELDS.firstName, SUBMISSION_FIELDS.githubUsername]) {
+    params.append("fields[]", field);
+  }
+  const data = await airtableRequest<{ records: AirtableRecord[] }>(config, `?${params.toString()}`);
+  const record = data.records[0];
+  if (!record) return null;
+  return {
+    firstName: String(record.fields[SUBMISSION_FIELDS.firstName] ?? ""),
+    githubUsername: String(record.fields[SUBMISSION_FIELDS.githubUsername] ?? ""),
+  };
 }
 
 export async function uploadAirtableAttachment({
@@ -781,6 +869,28 @@ export async function createReferral({
       typecast: false,
     }),
   });
+}
+
+// Every referral relationship — for the admin referrals dashboard. Same
+// offset-loop shape as listAllRedemptions, unfiltered.
+export async function listAllReferrals(): Promise<AirtableRecord[]> {
+  const config = referralsTableConfig();
+  const records: AirtableRecord[] = [];
+  let offset: string | undefined;
+  do {
+    const params = new URLSearchParams();
+    params.set("pageSize", "100");
+    if (offset) params.set("offset", offset);
+    const data = await airtableRequest<{ records: AirtableRecord[]; offset?: string }>(
+      config,
+      `?${params.toString()}`,
+    );
+    records.push(...data.records);
+    offset = data.offset;
+  } while (offset);
+  return records.sort(
+    (a, b) => new Date(b.createdTime ?? 0).getTime() - new Date(a.createdTime ?? 0).getTime(),
+  );
 }
 
 export async function markReferralPaid({

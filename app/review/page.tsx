@@ -1,15 +1,14 @@
 import { redirect } from "next/navigation";
 import { getSession } from "../../src/lib/auth";
-import { isAdminEmail } from "../../src/lib/admin";
+import { isAdminEmail, isReviewerEmail } from "../../src/lib/admin";
 import { getIdentity } from "../../src/lib/hackclub";
 import { listMessagesBySubmissionIds, listSubmissions, SUBMISSION_FIELDS } from "../../src/lib/airtable";
 import AdminQueue, { type AdminSubmissionRow } from "../components/admin/AdminQueue";
 
-const TELESCREEN_BASE = "https://telescreen.hackclub.com/workbench/hackatime/overview";
-// https://telescreen.hackclub.com/workbench/hackatime/overview?u=3353&p=gofan-front
-// Only the fields needed to render the queue are ever fetched from
-// Airtable — Name/Email/Address/Birthday are never requested, so they can't
-// leak into this page's payload even by accident.
+// Reviewer-scoped variant of /admin — same queue-building logic as
+// app/admin/page.tsx (duplicated rather than factored out for now, see
+// design.md decision 3), minus the Telescreen link, timer-control link, and
+// any submission belonging to the reviewer themselves.
 const QUEUE_FIELDS = [
   SUBMISSION_FIELDS.hackatimeId,
   SUBMISSION_FIELDS.hackatimeProjects,
@@ -21,6 +20,9 @@ const QUEUE_FIELDS = [
   SUBMISSION_FIELDS.screenshot,
   SUBMISSION_FIELDS.approved,
   SUBMISSION_FIELDS.reviewStatus,
+  // Fetched only to filter out the reviewer's own submission server-side —
+  // never included in AdminSubmissionRow or sent to the client.
+  SUBMISSION_FIELDS.email,
 ];
 
 const DUPLICATE_CHECK_FIELDS = [
@@ -49,7 +51,7 @@ function filterFormula(status: "Pending" | "Approved" | "Rejected" | "Fraud") {
   return `{${SUBMISSION_FIELDS.reviewStatus}} = '${status}'`;
 }
 
-export default async function AdminPage({
+export default async function ReviewPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string }>;
@@ -58,12 +60,17 @@ export default async function AdminPage({
   if (!session?.access_token) redirect("/api/auth/login");
 
   const identity = await getIdentity(session.access_token);
-  if (!identity?.primary_email || !isAdminEmail(identity.primary_email)) {
+  const email = identity?.primary_email;
+  if (!email || (!isAdminEmail(email) && !isReviewerEmail(email))) {
     redirect("/");
   }
 
   const status = ((await searchParams).status as "Pending" | "Approved" | "Rejected" | "Fraud") ?? "Pending";
-  const records = await listSubmissions(filterFormula(status), QUEUE_FIELDS);
+  const allRecordsForStatus = await listSubmissions(filterFormula(status), QUEUE_FIELDS);
+  // Reviewers never see their own submission, in any status tab.
+  const records = allRecordsForStatus.filter(
+    (record) => String(record.fields[SUBMISSION_FIELDS.email] ?? "").trim().toLowerCase() !== email.toLowerCase(),
+  );
 
   const messagesBySubmission = await listMessagesBySubmissionIds(records.map((r) => r.id));
 
@@ -113,7 +120,8 @@ export default async function AdminPage({
     return {
       id: record.id,
       hackatimeId,
-      telescreenLink: `${TELESCREEN_BASE}?u=${encodeURIComponent(hackatimeId)}`,
+      // No telescreenLink — reviewers don't get a link to the submitter's
+      // Hackatime overview, only the ID text (rendered by AdminQueue).
       codeUrl: String(record.fields[SUBMISSION_FIELDS.codeUrl] ?? ""),
       playableUrl: String(record.fields[SUBMISSION_FIELDS.playableUrl] ?? ""),
       lapseLinks: String(record.fields[SUBMISSION_FIELDS.lapseLinks] ?? ""),
@@ -133,15 +141,6 @@ export default async function AdminPage({
     <section className="w-4/6 mx-auto min-h-screen py-10 flex flex-col gap-6">
       <div className="flex items-baseline gap-4">
         <p className="text-4xl">review queue.</p>
-        <a href="/admin/timer" className="link opacity-70">
-          timer control →
-        </a>
-        <a href="/admin/purchases" className="link opacity-70">
-          purchases →
-        </a>
-        <a href="/admin/referrals" className="link opacity-70">
-          referrals →
-        </a>
       </div>
       <div className="stats stats-vertical sm:stats-horizontal bg-base-200 shadow">
         <div className="stat">
@@ -157,7 +156,7 @@ export default async function AdminPage({
           <div className="stat-value">{Math.round(totalHours * 10) / 10}</div>
         </div>
       </div>
-      <AdminQueue rows={rows} filter={status} />
+      <AdminQueue rows={rows} filter={status} showTelescreenLink={false} />
     </section>
   );
 }

@@ -6,7 +6,7 @@ import MessageThread, { type ThreadMessage } from "../dashboard/MessageThread";
 export type AdminSubmissionRow = {
   id: string;
   hackatimeId: string;
-  telescreenLink: string;
+  telescreenLink?: string;
   codeUrl: string;
   playableUrl: string;
   lapseLinks: string;
@@ -27,9 +27,11 @@ type Filter = (typeof FILTERS)[number];
 export default function AdminQueue({
   rows,
   filter,
+  showTelescreenLink = true,
 }: {
   rows: AdminSubmissionRow[];
   filter: Filter;
+  showTelescreenLink?: boolean;
 }) {
   const [rejectDraft, setRejectDraft] = useState<Record<string, string>>({});
   const [approveMessageDraft, setApproveMessageDraft] = useState<Record<string, string>>({});
@@ -100,9 +102,11 @@ export default function AdminQueue({
               <img src={row.screenshotUrl} alt="" className="w-32 h-32 object-cover rounded-lg" />
             )}
             <div className="flex flex-col gap-1 text-sm">
-              <a className="link" href={row.telescreenLink} target="_blank" rel="noreferrer">
-                Telescreen Link
-              </a>
+              {showTelescreenLink && row.telescreenLink && (
+                <a className="link" href={row.telescreenLink} target="_blank" rel="noreferrer">
+                  Telescreen Link
+                </a>
+              )}
               <a className="link" href={row.codeUrl} target="_blank" rel="noreferrer">
                 Code URL
               </a>

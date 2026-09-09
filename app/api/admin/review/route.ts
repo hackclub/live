@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionFromRequest } from "../../../../src/lib/auth";
-import { isAdminEmail } from "../../../../src/lib/admin";
+import { isAdminEmail, isReviewerEmail } from "../../../../src/lib/admin";
 import {
   createMessage,
   getSubmissionById,
@@ -21,7 +21,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
   }
   const identity = await getIdentity(session.access_token);
-  if (!identity?.primary_email || !isAdminEmail(identity.primary_email)) {
+  const isAdmin = Boolean(identity?.primary_email && isAdminEmail(identity.primary_email));
+  const isReviewer = Boolean(identity?.primary_email && isReviewerEmail(identity.primary_email));
+  if (!identity?.primary_email || (!isAdmin && !isReviewer)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
@@ -37,6 +39,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "message_required" }, { status: 400 });
   }
 
+  // Neither role may review their own submission — re-checked here
+  // server-side regardless of what the caller's queue displayed, since
+  // recordId is client-supplied.
+  const target = await getSubmissionById(recordId);
+  const targetEmail = String(target?.fields[SUBMISSION_FIELDS.email] ?? "").trim();
+  if (targetEmail && targetEmail.toLowerCase() === identity.primary_email.toLowerCase()) {
+    return NextResponse.json({ error: "cannot_review_own_submission" }, { status: 403 });
+  }
+
   const reviewedAt = new Date().toISOString();
 
   // "hours" is an adjustment action, not a verdict — it only rewrites the
@@ -47,11 +58,15 @@ export async function POST(request: Request) {
     if (!Number.isFinite(hours) || hours < 0) {
       return NextResponse.json({ error: "invalid_hours" }, { status: 400 });
     }
-    await updateAirtableRecord(recordId, {
+    const hoursFields: Record<string, unknown> = {
       [SUBMISSION_FIELDS.overrideHours]: Math.round(hours * 10) / 10,
       [SUBMISSION_FIELDS.reviewedAt]: reviewedAt,
       [SUBMISSION_FIELDS.reviewedBy]: identity.primary_email,
-    });
+    };
+    if (body.justification !== undefined) {
+      hoursFields[SUBMISSION_FIELDS.overrideHoursJustification] = String(body.justification).trim();
+    }
+    await updateAirtableRecord(recordId, hoursFields);
     return NextResponse.json({ ok: true });
   }
 
@@ -100,12 +115,10 @@ export async function POST(request: Request) {
   // never fails the review action.
   if (action === "approve") {
     try {
-      const submission = await getSubmissionById(recordId);
-      const submitterEmail = String(submission?.fields[SUBMISSION_FIELDS.email] ?? "");
-      if (submitterEmail) {
-        const outcome = await payReferral(submitterEmail, recordId);
+      if (targetEmail) {
+        const outcome = await payReferral(targetEmail, recordId);
         if (outcome !== "skipped") {
-          console.log(`[referral] payout for ${submitterEmail} on approve: ${outcome}`);
+          console.log(`[referral] payout for ${targetEmail} on approve: ${outcome}`);
         }
       }
     } catch (err) {
