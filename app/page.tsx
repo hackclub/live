@@ -136,7 +136,7 @@ export default function Home() {
 
             <div className="flex flex-col items-center gap-10 w-5/6 mx-auto text-center py-20">
 
-                <p className="font-1 text-lg"><u>every</u> hour <b className="font-extrabold">building</b> increases the stream by <u className="px-3 py-1 bg-primary text-primary-content font-bold text-xl">5 minutes</u></p>
+                <p className="font-1 text-lg"><u>every</u> hour <b className="font-extrabold">building</b> increases the stream by <u className="px-3 py-1 bg-primary text-primary-content font-bold text-xl">10 minutes</u></p>
 
                 <h1 className="font-2 text-7xl">the stream hasn&apos;t started <u>yet</u></h1>
 
@@ -147,7 +147,7 @@ export default function Home() {
 
                 <div className="font-2 flex flex-col gap-2 max-w-2xl">
                     <p className="text-3xl">stream length so far — <b>{bankedMinutes !== null ? formatMinutes(bankedMinutes) : "--"}</b></p>
-                    <p className="text-lg opacity-80">every approved hour adds 5 minutes, and it keeps counting <u>after</u> the stream starts.</p>\
+                    <p className="text-lg opacity-80">every approved hour adds 10 minutes, and it keeps counting <u>after</u> the stream starts.</p>\
 
                     <p>keep shipping = stream neva ends</p>
                 </div>
@@ -168,7 +168,7 @@ export default function Home() {
             <div className="flex mx-auto gap-5 w-5/6 flex-row items-center justify-center">
                 <div className="w-3/6 flex flex-col gap-2 h-full">
                     <div className="font-1 text-left flex flex-row align-center">
-                        <p className="font-1 mb-4 text-lg"><u>every</u> hour <b className="font-extrabold">building</b> increases the stream by <u className="px-3 py-1 bg-primary text-primary-content font-bold text-xl">5 minutes</u></p>
+                        <p className="font-1 mb-4 text-lg"><u>every</u> hour <b className="font-extrabold">building</b> increases the stream by <u className="px-3 py-1 bg-primary text-primary-content font-bold text-xl">10 minutes</u></p>
                     </div>
 
                     <h1 className="font-2 text-7xl">the livestream don&apos;t stop till you stop <u>shipping</u></h1>
@@ -283,7 +283,7 @@ export default function Home() {
 <div className="collapse bg-base-100 border border-base-300">
   <input type="radio" name="my-accordion-1" />
   <div className="collapse-title font-semibold">How much does the stream increase per hour shipped?</div>
-  <div className="collapse-content text-sm">per hour shipped, the stream increases by 5 minutes.</div>
+  <div className="collapse-content text-sm">per hour shipped, the stream increases by 10 minutes.</div>
 </div>
 <div className="collapse bg-base-100 border border-base-300">
   <input type="radio" name="my-accordion-1" />
