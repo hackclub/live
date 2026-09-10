@@ -213,6 +213,14 @@ export async function deleteAirtableRecord(recordId: string): Promise<void> {
   await airtableRequest(config, `/${recordId}`, { method: "DELETE" });
 }
 
+// Used by the admin purchases refund action — deletes a Redemptions record.
+// Balance is computed live from sumRedeemedCost(), so this alone restores
+// the redeemer's hours; no separate "refunded" bookkeeping is needed.
+export async function deleteRedemptionRecord(recordId: string): Promise<void> {
+  const config = redemptionsTableConfig();
+  await airtableRequest(config, `/${recordId}`, { method: "DELETE" });
+}
+
 // NOTE: kept for callers that only need "does this person have any record"
 // (e.g. /api/messages ownership checks). Submission create/update no longer
 // uses this to decide create-vs-update — a person can have multiple

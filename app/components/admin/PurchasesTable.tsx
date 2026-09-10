@@ -70,11 +70,38 @@ function SnapshotPanel({ redemptionId }: { redemptionId: string }) {
   );
 }
 
-export default function PurchasesTable({ rows }: { rows: PurchaseRow[] }) {
+export default function PurchasesTable({ rows: initialRows }: { rows: PurchaseRow[] }) {
+  const [rows, setRows] = useState(initialRows);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [refunding, setRefunding] = useState<string | null>(null);
+  const [refundError, setRefundError] = useState<{ id: string; message: string } | null>(null);
 
   if (rows.length === 0) {
     return <p className="opacity-60 text-sm">No redemptions yet.</p>;
+  }
+
+  async function handleRefund(row: PurchaseRow) {
+    if (!confirm(`Refund "${row.itemName}" for ${row.firstName || row.githubUsername || "this redeemer"}? This cannot be undone.`)) {
+      return;
+    }
+    setRefundError(null);
+    setRefunding(row.id);
+    try {
+      const res = await fetch("/api/admin/purchases/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recordId: row.id }),
+      });
+      if (!res.ok) {
+        setRefundError({ id: row.id, message: "Refund failed." });
+        return;
+      }
+      setRows((prev) => prev.filter((r) => r.id !== row.id));
+    } catch {
+      setRefundError({ id: row.id, message: "Network error." });
+    } finally {
+      setRefunding(null);
+    }
   }
 
   return (
@@ -100,18 +127,32 @@ export default function PurchasesTable({ rows }: { rows: PurchaseRow[] }) {
                 <td>{row.itemName}</td>
                 <td>{row.cost}</td>
                 <td>{row.redeemedAt ? new Date(row.redeemedAt).toLocaleString() : "—"}</td>
-                <td className="flex gap-3 items-center justify-end">
-                  {row.referralId && (
-                    <a href={`/admin/referrals#${row.referralId}`} className="link text-xs opacity-70">
-                      referral →
-                    </a>
+                <td className="flex flex-col items-end gap-1">
+                  <div className="flex gap-3 items-center justify-end">
+                    {row.referralId && (
+                      <a href={`/admin/referrals#${row.referralId}`} className="link text-xs opacity-70">
+                        referral →
+                      </a>
+                    )}
+                    <button
+                      className="btn btn-xs"
+                      onClick={() => setExpanded(expanded === row.id ? null : row.id)}
+                    >
+                      {expanded === row.id ? "hide" : "snapshot"}
+                    </button>
+                    {row.cost > 0 && (
+                      <button
+                        className="btn btn-xs btn-error"
+                        disabled={refunding === row.id}
+                        onClick={() => handleRefund(row)}
+                      >
+                        {refunding === row.id ? "refunding…" : "refund"}
+                      </button>
+                    )}
+                  </div>
+                  {refundError?.id === row.id && (
+                    <p className="text-xs text-error">{refundError.message}</p>
                   )}
-                  <button
-                    className="btn btn-xs"
-                    onClick={() => setExpanded(expanded === row.id ? null : row.id)}
-                  >
-                    {expanded === row.id ? "hide" : "snapshot"}
-                  </button>
                 </td>
               </tr>
               {expanded === row.id && (
