@@ -11,34 +11,32 @@ export const allShopItems: ShopItem[] = [
   { name: "Chrome Web Store Developer Grant", price: 1, img: "/prizes/chrome_web_store.png", description: "publish to the chrome web store" },
   { name: "$6.5/hr Hardware Grant", price: 1, img: "/prizes/grant_image.jpg", description: "funding to actually build out your project" },
   { name: "$5.00/hr Upgrade Grant", price: 1, img: "/prizes/grant_image.jpg", description: "lets say you want a slightly better laptop that costs 50 bucks more. you first would qualify for the laptop, n then you can use the upgrade grant to 'upgrade' ur prize further." },
-  { name: "Caliper", price: 2, img: "/prizes/caliper.png", description: "measure stuff" },
+  { name: "Caliper", price: 2, img: "/prizes/caliper.png", description: "measure stuff 10$ grant" },
 
   // ===== 2 HOURS =====
   { name: "2 hours for 5 pushups (stackable)", price: 2, img: "/prizes/pushups.jpg", description: "make the man suffer" },
-  { name: "Random piece of paper from HQ", price: 3, img: "/prizes/paper.jpg", description: "who knows what it could be" },
   { name: "Hosting Credits", price: 2, img: "/prizes/hosting.png", description: "deploy your projects, 10$ grant" },
 { name: "$35 Codédex Grant", price: 8, img: "/prizes/codedex_grant.png", description: "$35 toward a Codédex subscription to learn and practice coding" },
 { name: "$20 Domain Grant", price: 3, img: "/prizes/porkbun.png", description: "buying domains is p cool" },
-{ name: "PineCil Soldering Iron", price: 5, img: "/prizes/pinecil.jpg", description: "precision soldering for hardware projects" },
+{ name: "PineCil Soldering Iron", price: 5, img: "/prizes/pinecil.jpg", description: "precision soldering for hardware projects 30$ grant" },
 { name: "eat half a lemon", price: 5, img: "/prizes/lemon_eating.jpeg", description: "you grind, i suffer" },
   { name: "10 hours for me to eat the spiciest chip", price: 10, img: "/prizes/spicy_chip.jpg", description: "pain is temporary, glory is forever" },
-  { name: "Play Console Developer", price: 5, img: "/prizes/play_console.png", description: "publish android apps" },
-   { name: "Hot Plate", price: 4, img: "/prizes/hot_plate.jpg", description: "make ramen while you code" },
-   { name: "BLÅHAJ", price: 6, img: "/prizes/blahaj.jpg", description: "big big big" },
-     { name: "BAOFENG UV-9R ", price: 6, img: "/prizes/baofengUV9R.jpg", description: "Dual-band handheld radio — UHF/VHF for staying in touch (or just vibing on the airwaves)" },
+  { name: "Play Console Developer", price: 5, img: "/prizes/play_console.png", description: "publish android apps 25$ grant" },
+   { name: "Hot Plate", price: 4, img: "/prizes/hot_plate.jpg", description: "make ramen while you code 25$ grant" },
+   { name: "BLÅHAJ", price: 6, img: "/prizes/blahaj.jpg", description: "big big big 30$ grant" },
+     { name: "BAOFENG UV-9R ", price: 6, img: "/prizes/baofengUV9R.jpg", description: "Dual-band handheld radio 42$ grant" },
   // LVL 3 CLEARANCE — 15 hours
   // { name: "Casio Watch", price: 15, img: "/prizes/casio_image.jpg", description: "buy yourself a watch up to 100 dollars worth" },
-  { name: "ProtonMe 1 year subscription", price: 15, img: "/prizes/protonMe.jpg", description: "we all love privacy and stuff" },
+  { name: "ProtonMe 1 year subscription", price: 15, img: "/prizes/protonMe.jpg", description: "we all love privacy and stuff 50$ grant" },
   { name: "wake up archer in middle of night (and record it)", price: 15, img: "/prizes/archer_awakened.jpg", description: "wakey wakey archer" },
-  { name: "ProtonMe 1 year subscription", price: 18, img: "/prizes/protonMe.jpg", description: "we all love privacy and stuff" },
-  { name: "EPOMAKER TH99 PRO Keyboard", price: 15, img: "/prizes/creamy_keyboard.jpg", description: "my favorite keyboard by far." },
-  { name: "Anker Nano Charger (100W) with USB-C Cable", price: 17, img: "/prizes/anker_image.png", description: "best charger ever" },
+  { name: "EPOMAKER TH99 PRO Keyboard", price: 15, img: "/prizes/creamy_keyboard.jpg", description: "my favorite keyboard by far. 90$ grant" },
+  { name: "Anker Nano Charger (100W) with USB-C Cable", price: 17, img: "/prizes/anker_image.png", description: "best charger ever 50$ grant" },
   { name: "One Key Keychain", price: 3, img: "/prizes/keychain_image.jpg", description: "CLICKY CLICKY CLICKY" },
   { name: "$20 AI Grant", price: 3, img:"/prizes/ai_grant.png", description: "for all your ai needs..."},
   { name: "Four Key Macropad", price: 4, img: "/prizes/macropad_image.jpg", description: "little macropad you can actually use" },
   { name: "$70 MX Master 3S Grant", price: 12, img: "/prizes/mouse.png", description: "$70 for mx master 3s" },
   // ===== 17 HOURS =====
-  { name: "YubiKey 5C NFC", price: 20, img: "/prizes/yubikey.jpg", description: "secure your shi" },
+  { name: "YubiKey 5C NFC", price: 20, img: "/prizes/yubikey.jpg", description: "secure your shi 58$ grant" },
 
   // ===== 20 HOURS =====
   { name: "Keychron K3 QMK Wireless Mechanical Keyboard", price: 20, img: "/prizes/keychron_k3.jpg", description: "programmable mechanical keyboard" },
@@ -46,10 +44,10 @@ export const allShopItems: ShopItem[] = [
 
   // ===== 25 HOURS =====
   { name: "144Hz Curved Monitor", price: 25, img: "/prizes/minotor_pic.avif", description: "$125 dollar monitor grant for your setup" },
-  { name: "Kobo Clara BW", price: 25, img: "/prizes/kobo.jpg", description: "reading? whats that" },
+  { name: "Kobo Clara BW", price: 25, img: "/prizes/kobo.jpg", description: "reading? whats that 180$ grant" },
 
   // ===== 22 HOURS =====
-  { name: "Creality Ender-3 V3 SE", price: 28, img: "/prizes/creality.jpg", description: "3d printer for rapid prototyping" },
+  { name: "Creality Ender-3 V3 SE", price: 28, img: "/prizes/creality.jpg", description: "3d printer for rapid prototyping 200$ grant " },
 
   // ===== 30 HOURS =====
   { name: "Flipper Zero", price: 30, img: "/prizes/flipper_zero_img.webp", description: "hardware security hacking tool" },
@@ -79,7 +77,7 @@ export const allShopItems: ShopItem[] = [
   // ===== 75 HOURS =====
 
   // ===== 81 HOURS =====
-  { name: "11\" iPad Wi-Fi 128GB with Apple Pencil", price: 75, img: "/prizes/ipad_pencil.jpg", description: "artttttttttt" },
+  { name: "11\" iPad Wi-Fi 128GB with Apple Pencil", price: 75, img: "/prizes/ipad_pencil.jpg", description: "artttttttttt 600$ grant" },
 
   // ===== 83 HOURS =====
   { name: "Elgato Stream Deck MK.2", price: 83, img: "/prizes/elgato_streamdeck.jpg", description: "glorified macropad " },
