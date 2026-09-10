@@ -44,7 +44,7 @@ export const allShopItems: ShopItem[] = [
 
   // ===== 25 HOURS =====
   { name: "144Hz Curved Monitor", price: 25, img: "/prizes/minotor_pic.avif", description: "$125 dollar monitor grant for your setup" },
-  { name: "Kobo Clara BW", price: 25, img: "/prizes/kobo.jpg", description: "reading? whats that 180$ grant" },
+  { name: "Kobo Clara BW", price: 24, img: "/prizes/kobo.jpg", description: "reading? whats that 180$ grant" },
 
   // ===== 22 HOURS =====
   { name: "Creality Ender-3 V3 SE", price: 28, img: "/prizes/creality.jpg", description: "3d printer for rapid prototyping 200$ grant " },
@@ -57,22 +57,22 @@ export const allShopItems: ShopItem[] = [
   { name: "Rode PodMic", price: 35, img: "/prizes/rode_podmic.jpg", description: "professional quality podcast microphone" },
 
   // ===== 40 HOURS =====
-  { name: "Kindle Paperwhite", price: 40, img: "/prizes/kindle.jpg", description: "reading? whats that" },
+  { name: "Kindle Paperwhite", price: 40, img: "/prizes/kindle.jpg", description: "reading? whats that. 200$ grant" },
 
   // ===== 44 HOURS =====
-  { name: "Raspberry Pi 5", price: 44, img: "/prizes/rpi5.jpg", description: "its a expensive and tiny computer" },
+  { name: "Raspberry Pi 5", price: 44, img: "/prizes/rpi5.jpg", description: "its a expensive and tiny computer 310$ grant" },
 
   // ===== 46 HOURS =====
   { name: "Thinkpad T14 (Gen 2)", price: 46, img: "/prizes/thinkpad_laptop_img.jpg", description: "decent laptop for the price: Gen 2 14 inch FHD Intel i5-1135G7 2.4GHz 16GB RAM 128GB" },
 
   // ===== 51 HOURS =====
-  { name: "Anycubic Kobra 3 Combo", price: 51, img: "/prizes/anycubic.jpg", description: "3d printer + enclosure bundle" },
+  { name: "Anycubic Kobra 3 Combo", price: 51, img: "/prizes/anycubic.jpg", description: "3d printer + enclosure bundle 400$ grant " },
 
   // ===== 58 HOURS =====
   // EPOMAKER TH99 PRO Keyboard removed (duplicate at price 15)
 
   // ===== 65 HOURS =====
-  { name: "Meta Glasses Gen 1", price: 80, img: "/prizes/metaGlasses.jpeg", description: "because meta glasses r cool" },
+  { name: "Meta Glasses Gen 1", price: 80, img: "/prizes/metaGlasses.jpeg", description: "because meta glasses r cool 300$ grant " },
 
   // ===== 75 HOURS =====
 
@@ -80,13 +80,13 @@ export const allShopItems: ShopItem[] = [
   { name: "11\" iPad Wi-Fi 128GB with Apple Pencil", price: 75, img: "/prizes/ipad_pencil.jpg", description: "artttttttttt 600$ grant" },
 
   // ===== 83 HOURS =====
-  { name: "Elgato Stream Deck MK.2", price: 83, img: "/prizes/elgato_streamdeck.jpg", description: "glorified macropad " },
+  { name: "Elgato Stream Deck MK.2", price: 83, img: "/prizes/elgato_streamdeck.jpg", description: "glorified macropad 150$ grant " },
 
   // ===== 110 HOURS =====
-  { name: "GoPro HERO12 Black", price: 70, img: "/prizes/gopro.jpg", description: "record your adventures?" },
+  { name: "GoPro HERO12 Black", price: 70, img: "/prizes/gopro.jpg", description: "record your adventures? 350$ grant" },
 
   // ===== 133 HOURS =====
-  { name: "Sony WH-1000XM5 Wireless Noise Canceling Headphones (Black)", price: 60, img: "/prizes/headphones.png", description: "rlly nice headphones" },
+  { name: "Sony WH-1000XM5 Wireless Noise Canceling Headphones (Black)", price: 60, img: "/prizes/headphones.png", description: "rlly nice headphones 300$ grant" },
 
   // ===== 200 HOURS =====
   { name: "Gaming PC with a 4060", price: 200, img: "/prizes/gaming_pc_img.webp", description: "1.1k PC grant. some people like prebuilts, others don't. i wont bat an eye as long as its a PC." },
