@@ -50,6 +50,7 @@ export default async function DashboardPage() {
   const redemptions: Redemption[] = redemptionRecords.map((record) => ({
     id: record.id,
     itemName: String(record.fields[REDEMPTION_FIELDS.itemName] ?? ""),
+    quantity: Number(record.fields[REDEMPTION_FIELDS.quantity] ?? 1),
     cost: Number(record.fields[REDEMPTION_FIELDS.cost] ?? 0),
     redeemedAt: String(record.fields[REDEMPTION_FIELDS.redeemedAt] ?? ""),
   }));

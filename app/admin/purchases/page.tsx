@@ -51,6 +51,7 @@ export default async function AdminPurchasesPage() {
       firstName: identity?.firstName ?? "",
       githubUsername: identity?.githubUsername ?? "",
       itemName: String(record.fields[REDEMPTION_FIELDS.itemName] ?? ""),
+      quantity: Number(record.fields[REDEMPTION_FIELDS.quantity] ?? 1),
       cost,
       redeemedAt: String(record.fields[REDEMPTION_FIELDS.redeemedAt] ?? ""),
       referralId: referralByRedemptionId.get(record.id) ?? null,

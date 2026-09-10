@@ -8,6 +8,7 @@ export type PurchaseRow = {
   githubUsername: string;
   itemName: string;
   cost: number;
+  quantity: number;
   redeemedAt: string;
   referralId: string | null;
 };
@@ -84,7 +85,8 @@ export default function PurchasesTable({ rows }: { rows: PurchaseRow[] }) {
           <tr>
             <th>Redeemer</th>
             <th>Item</th>
-            <th>Cost</th>
+            <th>Quantity</th>
+            <th>Total cost</th>
             <th>Redeemed</th>
             <th />
           </tr>
@@ -98,7 +100,8 @@ export default function PurchasesTable({ rows }: { rows: PurchaseRow[] }) {
                   {row.githubUsername && <span className="opacity-60">@{row.githubUsername}</span>}
                 </td>
                 <td>{row.itemName}</td>
-                <td>{row.cost}</td>
+                <td>{row.quantity}</td>
+                <td>{row.cost} hours</td>
                 <td>{row.redeemedAt ? new Date(row.redeemedAt).toLocaleString() : "—"}</td>
                 <td className="flex gap-3 items-center justify-end">
                   {row.referralId && (
@@ -116,7 +119,7 @@ export default function PurchasesTable({ rows }: { rows: PurchaseRow[] }) {
               </tr>
               {expanded === row.id && (
                 <tr>
-                  <td colSpan={5} className="bg-base-200">
+                  <td colSpan={6} className="bg-base-200">
                     <SnapshotPanel redemptionId={row.id} />
                   </td>
                 </tr>
