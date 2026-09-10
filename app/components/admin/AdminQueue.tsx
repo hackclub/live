@@ -19,6 +19,7 @@ export type AdminSubmissionRow = {
   messages: ThreadMessage[];
   duplicateRecordIds: string[];
   duplicateHasApproved: boolean;
+  isBanned: boolean;
 };
 
 const FILTERS = ["Pending", "Approved", "Rejected", "Fraud"] as const;
@@ -28,10 +29,14 @@ export default function AdminQueue({
   rows,
   filter,
   showTelescreenLink = true,
+  isAdmin = false,
 }: {
   rows: AdminSubmissionRow[];
   filter: Filter;
   showTelescreenLink?: boolean;
+  // Ban is a permanent, program-wide action — unlike Approve/Reject/Fraud,
+  // reviewers never get this button, even though they share this component.
+  isAdmin?: boolean;
 }) {
   const [rejectDraft, setRejectDraft] = useState<Record<string, string>>({});
   const [approveMessageDraft, setApproveMessageDraft] = useState<Record<string, string>>({});
@@ -41,7 +46,7 @@ export default function AdminQueue({
 
   async function act(
     recordId: string,
-    action: "approve" | "reject" | "fraud" | "hours",
+    action: "approve" | "reject" | "fraud" | "hours" | "ban",
     extra?: Record<string, unknown>,
   ) {
     const message =
@@ -88,6 +93,9 @@ export default function AdminQueue({
 
         return (
         <div key={row.id} className="card bg-base-200 p-4 gap-3">
+          {row.isBanned && (
+            <div className="alert alert-error py-2 text-sm">⛔ (banned user)</div>
+          )}
           {row.duplicateRecordIds.length > 0 && (
             <div className="alert alert-warning py-2 text-sm">
               {row.duplicateHasApproved
@@ -191,6 +199,19 @@ export default function AdminQueue({
             >
               🚩 Fraud
             </button>
+            {isAdmin && !row.isBanned && (
+              <button
+                className="btn btn-error btn-outline btn-sm"
+                disabled={busy === row.id}
+                onClick={() => {
+                  if (window.confirm("Ban this submitter from the program? This is permanent until an admin unbans them.")) {
+                    act(row.id, "ban");
+                  }
+                }}
+              >
+                ⛔ Ban user
+              </button>
+            )}
           </div>
 
           <details>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionFromRequest } from "../../../../src/lib/auth";
 import { createRedemption, getTokenBalance } from "../../../../src/lib/airtable";
+import { isEmailBanned } from "../../../../src/lib/bans";
 import { getIdentity } from "../../../../src/lib/hackclub";
 import { findShopItemByName } from "../../../../src/lib/shopItems";
 
@@ -12,6 +13,10 @@ export async function POST(request: Request) {
   const identity = await getIdentity(session.access_token);
   if (!identity?.primary_email) {
     return NextResponse.json({ error: "identity_unavailable" }, { status: 401 });
+  }
+
+  if (await isEmailBanned(identity.primary_email)) {
+    return NextResponse.json({ error: "banned" }, { status: 403 });
   }
 
   const body = await request.json();

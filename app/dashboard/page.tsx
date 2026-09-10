@@ -17,6 +17,7 @@ import {
   mapIdentityAddress,
   normalizeBirthdate,
 } from "../../src/lib/hackclub";
+import { isEmailBanned } from "../../src/lib/bans";
 import Link from "next/link";
 import Footer from "../components/Footer";
 import { getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "../../src/lib/hackatime";
@@ -38,7 +39,15 @@ export default async function DashboardPage() {
       </section>
     );
   }
- 
+
+  if (await isEmailBanned(identity.primary_email)) {
+    return (
+      <section className="w-4/6 mx-auto min-h-screen py-10">
+        <p className="text-error">you were banned</p>
+      </section>
+    );
+  }
+
   const [hackatimeMe, hackatimeProjects, ownRecords, personalHours, redemptionRecords] = await Promise.all([
     getHackatimeMe(session.hackatime_access_token!),
     getHackatimeProjects(session.hackatime_access_token!),

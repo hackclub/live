@@ -19,6 +19,7 @@ import {
 } from "../../../src/lib/hackclub";
 import { getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "../../../src/lib/hackatime";
 import { validateSubmissionInput, type SubmissionInput } from "../../../src/lib/submission";
+import { isEmailBanned } from "../../../src/lib/bans";
 
 export async function POST(request: Request) {
   const session = await getSessionFromRequest(request);
@@ -29,6 +30,10 @@ export async function POST(request: Request) {
   const identity = await getIdentity(session.access_token);
   if (!identity?.primary_email) {
     return NextResponse.json({ error: "identity_unavailable" }, { status: 401 });
+  }
+
+  if (await isEmailBanned(identity.primary_email)) {
+    return NextResponse.json({ error: "banned" }, { status: 403 });
   }
 
   // Address + birthday come from the HCA identity, never the form. If the

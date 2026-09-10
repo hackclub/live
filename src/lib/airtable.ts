@@ -86,6 +86,16 @@ export const REFERRAL_RESOLUTION_FIELDS = {
   email: "Email",
 } as const;
 
+// Banned Users — see add-admin-user-ban. One row per banned HCA email; the
+// only place a person's ban status lives (never denormalized onto their
+// Submission records).
+export const BANNED_USER_FIELDS = {
+  email: "Email",
+  bannedAt: "Banned At",
+  bannedBy: "Banned By",
+  reason: "Reason",
+} as const;
+
 export const REFERRAL_STATUS = {
   pending: "pending",
   paid: "paid",
@@ -153,6 +163,16 @@ function referralResolutionsTableConfig() {
   const tableName = process.env.AIRTABLE_REFERRAL_RESOLUTIONS_TABLE_NAME;
   if (!apiKey || !baseId || !tableName) {
     throw new Error("Airtable referral resolutions env vars are not configured");
+  }
+  return { apiKey, baseId, tableName };
+}
+
+function bannedUsersTableConfig() {
+  const apiKey = process.env.AIRTABLE_PAT;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  const tableName = process.env.AIRTABLE_BANNED_USERS_TABLE_NAME;
+  if (!apiKey || !baseId || !tableName) {
+    throw new Error("Airtable banned users env vars are not configured");
   }
   return { apiKey, baseId, tableName };
 }
@@ -924,4 +944,69 @@ export async function markReferralPaid({
     method: "PATCH",
     body: JSON.stringify({ fields, typecast: false }),
   });
+}
+
+// ----- Banned Users -----
+
+export async function getBannedUserByEmail(email: string): Promise<AirtableRecord | null> {
+  const config = bannedUsersTableConfig();
+  const formula = encodeURIComponent(
+    `LOWER({${BANNED_USER_FIELDS.email}}) = '${escapeFormulaValue(email.toLowerCase())}'`,
+  );
+  const data = await airtableRequest<{ records: AirtableRecord[] }>(
+    config,
+    `?filterByFormula=${formula}&maxRecords=1`,
+  );
+  return data.records[0] ?? null;
+}
+
+// Every ban — for the admin banned-users page and for the review queue's
+// cross-referencing badge (see app/admin/page.tsx, app/review/page.tsx).
+export async function listBannedUsers(): Promise<AirtableRecord[]> {
+  const config = bannedUsersTableConfig();
+  const records: AirtableRecord[] = [];
+  let offset: string | undefined;
+  do {
+    const params = new URLSearchParams();
+    params.set("pageSize", "100");
+    if (offset) params.set("offset", offset);
+    const data = await airtableRequest<{ records: AirtableRecord[]; offset?: string }>(
+      config,
+      `?${params.toString()}`,
+    );
+    records.push(...data.records);
+    offset = data.offset;
+  } while (offset);
+  return records.sort(
+    (a, b) => new Date(b.createdTime ?? 0).getTime() - new Date(a.createdTime ?? 0).getTime(),
+  );
+}
+
+export async function createBannedUser({
+  email,
+  bannedBy,
+  reason,
+}: {
+  email: string;
+  bannedBy: string;
+  reason?: string;
+}): Promise<AirtableRecord> {
+  const config = bannedUsersTableConfig();
+  return airtableRequest(config, "", {
+    method: "POST",
+    body: JSON.stringify({
+      fields: {
+        [BANNED_USER_FIELDS.email]: email,
+        [BANNED_USER_FIELDS.bannedAt]: new Date().toISOString(),
+        [BANNED_USER_FIELDS.bannedBy]: bannedBy,
+        [BANNED_USER_FIELDS.reason]: reason || undefined,
+      },
+      typecast: false,
+    }),
+  });
+}
+
+export async function deleteBannedUser(recordId: string): Promise<void> {
+  const config = bannedUsersTableConfig();
+  await airtableRequest(config, `/${recordId}`, { method: "DELETE" });
 }

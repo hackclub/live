@@ -11,8 +11,9 @@ import {
 } from "../../../../src/lib/airtable";
 import { getIdentity } from "../../../../src/lib/hackclub";
 import { payReferral } from "../../../../src/lib/referral";
+import { banEmail } from "../../../../src/lib/bans";
 
-const ACTIONS = ["approve", "reject", "fraud", "hours"] as const;
+const ACTIONS = ["approve", "reject", "fraud", "hours", "ban"] as const;
 type Action = (typeof ACTIONS)[number];
 
 export async function POST(request: Request) {
@@ -38,6 +39,11 @@ export async function POST(request: Request) {
   if (action === "reject" && !message) {
     return NextResponse.json({ error: "message_required" }, { status: 400 });
   }
+  // Ban is a permanent, program-wide action — stricter than every other
+  // review action, which reviewers may also take. Admin-only.
+  if (action === "ban" && !isAdmin) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
 
   // Neither role may review their own submission — re-checked here
   // server-side regardless of what the caller's queue displayed, since
@@ -46,6 +52,18 @@ export async function POST(request: Request) {
   const targetEmail = String(target?.fields[SUBMISSION_FIELDS.email] ?? "").trim();
   if (targetEmail && targetEmail.toLowerCase() === identity.primary_email.toLowerCase()) {
     return NextResponse.json({ error: "cannot_review_own_submission" }, { status: 403 });
+  }
+
+  // Ban acts on the *person* (email), not this submission's Review
+  // Status/Approved fields — those are left untouched, per the
+  // non-cascading-Fraud precedent this action deliberately breaks from at
+  // the person level, not the record level.
+  if (action === "ban") {
+    if (!targetEmail) {
+      return NextResponse.json({ error: "email_unavailable" }, { status: 409 });
+    }
+    await banEmail(targetEmail, identity.primary_email);
+    return NextResponse.json({ ok: true });
   }
 
   const reviewedAt = new Date().toISOString();

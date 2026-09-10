@@ -1,6 +1,7 @@
 import { requireSession } from "../../src/lib/auth";
 import { getIdentity } from "../../src/lib/hackclub";
 import { getTokenBalance } from "../../src/lib/airtable";
+import { isEmailBanned } from "../../src/lib/bans";
 import { shopItemsByPriceAsc } from "../../src/lib/shopItems";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -14,6 +15,14 @@ export default async function Redeem() {
     return (
       <section className="w-4/6 mx-auto min-h-screen py-10">
         <p className="text-error">Couldn&apos;t load your Hack Club identity. Try logging in again.</p>
+      </section>
+    );
+  }
+
+  if (await isEmailBanned(identity.primary_email)) {
+    return (
+      <section className="w-4/6 mx-auto min-h-screen py-10">
+        <p className="text-error">you were banned</p>
       </section>
     );
   }

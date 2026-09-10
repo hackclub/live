@@ -2,7 +2,13 @@ import { redirect } from "next/navigation";
 import { getSession } from "../../src/lib/auth";
 import { isAdminEmail, isReviewerEmail } from "../../src/lib/admin";
 import { getIdentity } from "../../src/lib/hackclub";
-import { listMessagesBySubmissionIds, listSubmissions, SUBMISSION_FIELDS } from "../../src/lib/airtable";
+import {
+  BANNED_USER_FIELDS,
+  listBannedUsers,
+  listMessagesBySubmissionIds,
+  listSubmissions,
+  SUBMISSION_FIELDS,
+} from "../../src/lib/airtable";
 import AdminQueue, { type AdminSubmissionRow } from "../components/admin/AdminQueue";
 
 // Reviewer-scoped variant of /admin — same queue-building logic as
@@ -30,6 +36,9 @@ const DUPLICATE_CHECK_FIELDS = [
   SUBMISSION_FIELDS.approved,
   SUBMISSION_FIELDS.reviewStatus,
   SUBMISSION_FIELDS.overrideHours,
+  // Fetched only for the server-side banned-user cross-reference below —
+  // never included in AdminSubmissionRow or sent to the client.
+  SUBMISSION_FIELDS.email,
 ];
 
 // Treats cosmetically different links to the same project as the same
@@ -77,6 +86,15 @@ export default async function ReviewPage({
   // Cross-status scan so a duplicate/already-approved Code URL is flagged
   // no matter which status tab it's being viewed from.
   const allRecords = await listSubmissions(undefined, DUPLICATE_CHECK_FIELDS);
+
+  // Server-side only: banned emails are never attached to AdminSubmissionRow,
+  // only reduced to a per-record `isBanned` boolean below.
+  const bannedUserRecords = await listBannedUsers();
+  const bannedEmails = new Set(
+    bannedUserRecords.map((r) => String(r.fields[BANNED_USER_FIELDS.email] ?? "").trim().toLowerCase()).filter(Boolean),
+  );
+  const bannedRecordIds = new Set<string>();
+
   const groupsByCodeUrl = new Map<string, { id: string; approved: boolean }[]>();
   let unreviewedCount = 0;
   let totalHours = 0;
@@ -88,6 +106,9 @@ export default async function ReviewPage({
       group.push({ id: record.id, approved: Boolean(record.fields[SUBMISSION_FIELDS.approved]) });
       groupsByCodeUrl.set(key, group);
     }
+
+    const recordEmail = String(record.fields[SUBMISSION_FIELDS.email] ?? "").trim().toLowerCase();
+    if (recordEmail && bannedEmails.has(recordEmail)) bannedRecordIds.add(record.id);
 
     const approved = Boolean(record.fields[SUBMISSION_FIELDS.approved]);
     const reviewStatus = String(record.fields[SUBMISSION_FIELDS.reviewStatus] ?? "Pending");
@@ -104,13 +125,14 @@ export default async function ReviewPage({
     const others = group.filter((r) => r.id !== record.id);
     const duplicateRecordIds = others.map((r) => r.id);
     const duplicateHasApproved = others.some((r) => r.approved);
-    return buildRow(record, duplicateRecordIds, duplicateHasApproved);
+    return buildRow(record, duplicateRecordIds, duplicateHasApproved, bannedRecordIds.has(record.id));
   });
 
   function buildRow(
     record: (typeof records)[number],
     duplicateRecordIds: string[],
     duplicateHasApproved: boolean,
+    isBanned: boolean,
   ): AdminSubmissionRow {
     const hackatimeId = String(record.fields[SUBMISSION_FIELDS.hackatimeId] ?? "");
     const screenshot = record.fields[SUBMISSION_FIELDS.screenshot] as
@@ -134,6 +156,7 @@ export default async function ReviewPage({
       messages: messagesBySubmission.get(record.id) ?? [],
       duplicateRecordIds,
       duplicateHasApproved,
+      isBanned,
     };
   }
 
@@ -156,7 +179,7 @@ export default async function ReviewPage({
           <div className="stat-value">{Math.round(totalHours * 10) / 10}</div>
         </div>
       </div>
-      <AdminQueue rows={rows} filter={status} showTelescreenLink={false} />
+      <AdminQueue rows={rows} filter={status} showTelescreenLink={false} isAdmin={isAdminEmail(email)} />
     </section>
   );
 }
