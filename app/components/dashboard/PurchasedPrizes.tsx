@@ -4,6 +4,7 @@ export type Redemption = {
   id: string;
   itemName: string;
   cost: number;
+  quantity: number;
   redeemedAt: string;
 };
 
@@ -22,7 +23,7 @@ export default function PurchasedPrizes({ redemptions }: { redemptions: Redempti
               // eslint-disable-next-line @next/next/no-img-element
               <img src={item.img} alt="" className="w-full object-cover h-40 rounded-lg" />
             )}
-            <p className="font-2">{r.itemName}</p>
+            <p className="font-2">{r.quantity} × {r.itemName}</p>
             <p className="text-xs opacity-60 font-2">
               {r.cost} hours{r.redeemedAt ? ` · ${new Date(r.redeemedAt).toLocaleDateString()}` : ""}
             </p>

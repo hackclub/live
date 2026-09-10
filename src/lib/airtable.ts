@@ -53,6 +53,7 @@ export const MESSAGE_SENDER = {
 export const REDEMPTION_FIELDS = {
   email: "Email",
   itemName: "Item Name",
+  quantity: "Quantity",
   cost: "Cost",
   redeemedAt: "Redeemed At",
 } as const;
@@ -405,10 +406,12 @@ export async function createRedemption({
   email,
   itemName,
   cost,
+  quantity = 1,
 }: {
   email: string;
   itemName: string;
   cost: number;
+  quantity?: number;
 }): Promise<AirtableRecord> {
   const config = redemptionsTableConfig();
   return airtableRequest(config, "", {
@@ -418,6 +421,7 @@ export async function createRedemption({
         [REDEMPTION_FIELDS.email]: email,
         [REDEMPTION_FIELDS.itemName]: itemName,
         [REDEMPTION_FIELDS.cost]: cost,
+        [REDEMPTION_FIELDS.quantity]: quantity,
         [REDEMPTION_FIELDS.redeemedAt]: new Date().toISOString(),
       },
       typecast: false,

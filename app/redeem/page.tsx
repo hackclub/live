@@ -1,7 +1,7 @@
 import { requireSession } from "../../src/lib/auth";
 import { getIdentity } from "../../src/lib/hackclub";
 import { getTokenBalance } from "../../src/lib/airtable";
-import { shopItemsByPriceAsc } from "../../src/lib/shopItems";
+import { findShopItemByName, shopItemsByPriceAsc } from "../../src/lib/shopItems";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import RedeemCatalog from "../components/RedeemCatalog";
@@ -19,13 +19,14 @@ export default async function Redeem() {
   }
 
   const balance = await getTokenBalance(identity.primary_email);
+  const items = shopItemsByPriceAsc.filter((item) => findShopItemByName(item.name) === item);
 
   return (
     <>
       <Navbar />
 
       <section className="w-4/6 font-2 mx-auto min-h-screen">
-        <RedeemCatalog items={shopItemsByPriceAsc} initialBalance={balance} />
+        <RedeemCatalog items={items} initialBalance={balance} />
       </section>
 
       <Footer />
