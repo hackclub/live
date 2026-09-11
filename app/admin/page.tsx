@@ -27,6 +27,10 @@ const QUEUE_FIELDS = [
   SUBMISSION_FIELDS.screenshot,
   SUBMISSION_FIELDS.approved,
   SUBMISSION_FIELDS.reviewStatus,
+  SUBMISSION_FIELDS.reviewerVerdict,
+  SUBMISSION_FIELDS.reviewerJustification,
+  SUBMISSION_FIELDS.reviewerHours,
+  SUBMISSION_FIELDS.reviewerReviewedBy,
 ];
 
 const DUPLICATE_CHECK_FIELDS = [
@@ -52,10 +56,15 @@ function normalizeCodeUrl(url: string): string {
     .replace(/\/+$/, "");
 }
 
-function filterFormula(status: "Pending" | "Approved" | "Rejected" | "Fraud") {
+type Status = "Pending" | "Prereviewed" | "Approved" | "Rejected" | "Fraud";
+
+function filterFormula(status: Status) {
   if (status === "Approved") return `{${SUBMISSION_FIELDS.approved}} = TRUE()`;
+  if (status === "Prereviewed") {
+    return `AND({${SUBMISSION_FIELDS.reviewerVerdict}} != '', {${SUBMISSION_FIELDS.approved}} = FALSE(), OR({${SUBMISSION_FIELDS.reviewStatus}} = 'Pending', {${SUBMISSION_FIELDS.reviewStatus}} = ''))`;
+  }
   if (status === "Pending") {
-    return `AND({${SUBMISSION_FIELDS.approved}} = FALSE(), OR({${SUBMISSION_FIELDS.reviewStatus}} = 'Pending', {${SUBMISSION_FIELDS.reviewStatus}} = ''))`;
+    return `AND({${SUBMISSION_FIELDS.approved}} = FALSE(), OR({${SUBMISSION_FIELDS.reviewStatus}} = 'Pending', {${SUBMISSION_FIELDS.reviewStatus}} = ''), {${SUBMISSION_FIELDS.reviewerVerdict}} = '')`;
   }
   return `{${SUBMISSION_FIELDS.reviewStatus}} = '${status}'`;
 }
@@ -73,7 +82,7 @@ export default async function AdminPage({
     redirect("/");
   }
 
-  const status = ((await searchParams).status as "Pending" | "Approved" | "Rejected" | "Fraud") ?? "Pending";
+  const status = ((await searchParams).status as Status) ?? "Pending";
   const records = await listSubmissions(filterFormula(status), QUEUE_FIELDS);
 
   const messagesBySubmission = await listMessagesBySubmissionIds(records.map((r) => r.id));
@@ -159,6 +168,8 @@ export default async function AdminPage({
       | Array<{ url: string }>
       | undefined;
     const hoursRaw = record.fields[SUBMISSION_FIELDS.overrideHours];
+    const reviewerVerdictRaw = record.fields[SUBMISSION_FIELDS.reviewerVerdict];
+    const reviewerHoursRaw = record.fields[SUBMISSION_FIELDS.reviewerHours];
     return {
       id: record.id,
       hackatimeId,
@@ -176,6 +187,10 @@ export default async function AdminPage({
       duplicateRecordIds,
       duplicateHasApproved,
       isBanned,
+      reviewerVerdict: reviewerVerdictRaw === "Approve" || reviewerVerdictRaw === "Reject" ? reviewerVerdictRaw : null,
+      reviewerJustification: String(record.fields[SUBMISSION_FIELDS.reviewerJustification] ?? ""),
+      reviewerHours: typeof reviewerHoursRaw === "number" ? reviewerHoursRaw : null,
+      reviewerReviewedBy: String(record.fields[SUBMISSION_FIELDS.reviewerReviewedBy] ?? ""),
     };
   }
 

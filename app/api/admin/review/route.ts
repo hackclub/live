@@ -13,7 +13,7 @@ import { getIdentity } from "../../../../src/lib/hackclub";
 import { payReferral } from "../../../../src/lib/referral";
 import { banEmail } from "../../../../src/lib/bans";
 
-const ACTIONS = ["approve", "reject", "fraud", "hours", "ban"] as const;
+const ACTIONS = ["approve", "reject", "fraud", "hours", "ban", "precheck"] as const;
 type Action = (typeof ACTIONS)[number];
 
 export async function POST(request: Request) {
@@ -42,6 +42,11 @@ export async function POST(request: Request) {
   // Ban is a permanent, program-wide action — stricter than every other
   // review action, which reviewers may also take. Admin-only.
   if (action === "ban" && !isAdmin) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  // Fraud is a terminal, payout-relevant verdict — reviewers only get the
+  // non-terminal `precheck` action; flagging fraud outright is admin-only.
+  if (action === "fraud" && !isAdmin) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
@@ -85,6 +90,34 @@ export async function POST(request: Request) {
       hoursFields[SUBMISSION_FIELDS.overrideHoursJustification] = String(body.justification).trim();
     }
     await updateAirtableRecord(recordId, hoursFields);
+    return NextResponse.json({ ok: true });
+  }
+
+  // "precheck" is a reviewer's recommendation, not a verdict — it writes only
+  // the Reviewer * fields and never touches Approved, Review Status, Override
+  // Hours, or Reviewed By/At. No payout, referral, or timer effect follows
+  // from this action; an admin's own approve/reject/fraud action is what
+  // finalizes a submission.
+  if (action === "precheck") {
+    const verdict = String(body.verdict ?? "");
+    if (verdict !== "approve" && verdict !== "reject") {
+      return NextResponse.json({ error: "invalid_verdict" }, { status: 400 });
+    }
+    const justification = String(body.justification ?? "").trim();
+    if (!justification) {
+      return NextResponse.json({ error: "justification_required" }, { status: 400 });
+    }
+    const hours = Number(body.hours);
+    if (!Number.isFinite(hours) || hours < 0) {
+      return NextResponse.json({ error: "invalid_hours" }, { status: 400 });
+    }
+    await updateAirtableRecord(recordId, {
+      [SUBMISSION_FIELDS.reviewerVerdict]: verdict === "approve" ? "Approve" : "Reject",
+      [SUBMISSION_FIELDS.reviewerJustification]: justification,
+      [SUBMISSION_FIELDS.reviewerHours]: Math.round(hours * 10) / 10,
+      [SUBMISSION_FIELDS.reviewerReviewedBy]: identity.primary_email,
+      [SUBMISSION_FIELDS.reviewerReviewedAt]: reviewedAt,
+    });
     return NextResponse.json({ ok: true });
   }
 

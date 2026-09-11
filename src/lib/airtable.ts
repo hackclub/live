@@ -29,6 +29,14 @@ export const SUBMISSION_FIELDS = {
   reviewStatus: "Review Status",
   reviewedAt: "Reviewed At",
   reviewedBy: "Reviewed By",
+  // Reviewer precheck fields — distinct from the admin's final fields above.
+  // Written only by the `precheck` action; never read by countApprovedHours,
+  // payReferral, or anything else that treats a submission as finalized.
+  reviewerVerdict: "Reviewer Verdict",
+  reviewerJustification: "Reviewer Justification",
+  reviewerHours: "Reviewer Hours",
+  reviewerReviewedBy: "Reviewer Reviewed By",
+  reviewerReviewedAt: "Reviewer Reviewed At",
 } as const;
 
 export const REVIEW_STATUS = {

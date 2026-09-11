@@ -55,7 +55,10 @@ function normalizeCodeUrl(url: string): string {
 function filterFormula(status: "Pending" | "Approved" | "Rejected" | "Fraud") {
   if (status === "Approved") return `{${SUBMISSION_FIELDS.approved}} = TRUE()`;
   if (status === "Pending") {
-    return `AND({${SUBMISSION_FIELDS.approved}} = FALSE(), OR({${SUBMISSION_FIELDS.reviewStatus}} = 'Pending', {${SUBMISSION_FIELDS.reviewStatus}} = ''))`;
+    // Excludes submissions someone has already prechecked — those move to
+    // the admin's Prereviewed queue and shouldn't linger in a reviewer's
+    // Pending tab pending a second, redundant precheck.
+    return `AND({${SUBMISSION_FIELDS.approved}} = FALSE(), OR({${SUBMISSION_FIELDS.reviewStatus}} = 'Pending', {${SUBMISSION_FIELDS.reviewStatus}} = ''), {${SUBMISSION_FIELDS.reviewerVerdict}} = '')`;
   }
   return `{${SUBMISSION_FIELDS.reviewStatus}} = '${status}'`;
 }
@@ -179,7 +182,14 @@ export default async function ReviewPage({
           <div className="stat-value">{Math.round(totalHours * 10) / 10}</div>
         </div>
       </div>
-      <AdminQueue rows={rows} filter={status} showTelescreenLink={false} isAdmin={isAdminEmail(email)} />
+      <AdminQueue
+        rows={rows}
+        filter={status}
+        tabs={["Pending", "Approved", "Rejected", "Fraud"]}
+        showTelescreenLink={false}
+        isAdmin={isAdminEmail(email)}
+        variant="review"
+      />
     </section>
   );
 }
