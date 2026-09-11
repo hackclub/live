@@ -28,6 +28,7 @@ export const allShopItems: ShopItem[] = [
      { name: "BAOFENG UV-9R ", price: 6, img: "/prizes/baofengUV9R.jpg", description: "Dual-band handheld radio — UHF/VHF for staying in touch (or just vibing on the airwaves)" },
   // LVL 3 CLEARANCE — 15 hours
   // { name: "Casio Watch", price: 15, img: "/prizes/casio_image.jpg", description: "buy yourself a watch up to 100 dollars worth" },
+  { name: "Sony WH-CH720N headphones", price: 15, img: "/prizes/headphones.png", description: "buy med-range Sony headphone or one up to 100 dollars worth" },
   { name: "ProtonMe 1 year subscription", price: 15, img: "/prizes/protonMe.jpg", description: "we all love privacy and stuff" },
   { name: "wake up archer in middle of night (and record it)", price: 15, img: "/prizes/archer_awakened.jpg", description: "wakey wakey archer" },
   { name: "ProtonMe 1 year subscription", price: 18, img: "/prizes/protonMe.jpg", description: "we all love privacy and stuff" },
