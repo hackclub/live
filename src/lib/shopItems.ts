@@ -37,8 +37,10 @@ export const allShopItems: ShopItem[] = [
   { name: "$20 AI Grant", price: 3, img:"/prizes/ai_grant.png", description: "for all your ai needs..."},
   { name: "Four Key Macropad", price: 4, img: "/prizes/macropad_image.jpg", description: "little macropad you can actually use" },
   { name: "$70 MX Master 3S Grant", price: 12, img: "/prizes/mouse.png", description: "$70 for mx master 3s" },
+  
   // ===== 17 HOURS =====
   { name: "YubiKey 5C NFC", price: 20, img: "/prizes/yubikey.jpg", description: "secure your shi" },
+  { name: "$100 Power Bank Grant", price: 17, img: "/prizes/powerbank.png", description: "Stay juiced up" },
 
   // ===== 20 HOURS =====
   { name: "Keychron K3 QMK Wireless Mechanical Keyboard", price: 20, img: "/prizes/keychron_k3.jpg", description: "programmable mechanical keyboard" },
