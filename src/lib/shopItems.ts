@@ -64,6 +64,9 @@ export const allShopItems: ShopItem[] = [
   // ===== 44 HOURS =====
   { name: "Raspberry Pi 5", price: 44, img: "/prizes/rpi5.jpg", description: "its a expensive and tiny computer" },
 
+  // ===== 45 HOURS =====
+  { name: "SO-ARM101 Robot Arm Kit", price: 45, img: "/prizes/so_arm101.jpg", description: "unassembled leader + follower arm kit w/ camera, from the Hugging Face LeRobot project" },
+
   // ===== 46 HOURS =====
   { name: "Thinkpad T14 (Gen 2)", price: 46, img: "/prizes/thinkpad_laptop_img.jpg", description: "decent laptop for the price: Gen 2 14 inch FHD Intel i5-1135G7 2.4GHz 16GB RAM 128GB" },
 
