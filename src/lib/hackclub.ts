@@ -70,7 +70,7 @@ export async function getIdentity(accessToken: string): Promise<HackclubIdentity
   });
 
   if (!response.ok) {
-    console.error("[hackclub] /api/v1/me failed", response.status, await response.text());
+    console.error("[hackclub] /api/v1/me failed", response.status);
     return null;
   }
   const data = await response.json();

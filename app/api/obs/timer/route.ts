@@ -1,14 +1,30 @@
 import { NextResponse } from "next/server";
-import { getTimerState, StreamNotConfiguredError } from "../../../../src/lib/timer";
+import { clientIp, rateLimit } from "../../../../src/lib/rateLimit";
+import { getTimerState, StreamNotConfiguredError, type TimerState } from "../../../../src/lib/timer";
 
 // Unauthenticated on purpose — OBS Browser Sources can't complete an OAuth
 // redirect or hold a login session (see design.md Decision 2).
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+const CACHE_MS = 5000;
+let cache: { at: number; state: TimerState } | null = null;
+
+async function cachedTimerState(): Promise<TimerState> {
+  const now = Date.now();
+  if (cache && now - cache.at < CACHE_MS) return cache.state;
+  const state = await getTimerState();
+  cache = { at: now, state };
+  return state;
+}
+
+export async function GET(request: Request) {
+  if (!rateLimit(`obs-timer:${clientIp(request)}`, 120, 60_000)) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
   let state;
   try {
-    state = await getTimerState();
+    state = await cachedTimerState();
   } catch (err) {
     if (err instanceof StreamNotConfiguredError) {
       return NextResponse.json({ error: "stream_not_configured" }, { status: 503 });
@@ -27,12 +43,15 @@ export async function GET() {
     state.approvedHours * state.minutesPerHour +
     state.adjustmentMinutes;
 
-  return NextResponse.json({
-    deadline: state.deadline,
-    approvedHours: state.approvedHours,
-    adjustmentMinutes: state.adjustmentMinutes,
-    prelaunch,
-    streamStartAt: state.streamStartAt,
-    bankedMinutes,
-  });
+  return NextResponse.json(
+    {
+      deadline: state.deadline,
+      approvedHours: state.approvedHours,
+      adjustmentMinutes: state.adjustmentMinutes,
+      prelaunch,
+      streamStartAt: state.streamStartAt,
+      bankedMinutes,
+    },
+    { headers: { "Cache-Control": "public, s-maxage=5, stale-while-revalidate=25" } },
+  );
 }

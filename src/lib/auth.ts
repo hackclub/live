@@ -30,6 +30,11 @@ export async function getSessionFromRequest(request: Request): Promise<SessionPa
     .map((part) => part.trim())
     .find((part) => part.startsWith(`${SESSION_COOKIE}=`));
   if (!match) return null;
-  const value = decodeURIComponent(match.slice(SESSION_COOKIE.length + 1));
+  let value: string;
+  try {
+    value = decodeURIComponent(match.slice(SESSION_COOKIE.length + 1));
+  } catch {
+    return null;
+  }
   return decryptSession(value);
 }
