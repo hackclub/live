@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { exchangeCodeForTokens } from "../../../../src/lib/hackclub";
 import { getHackclubRedirectUri, getRequestOrigin } from "../../../../src/lib/origin";
 import { encryptSession, sessionCookieOptions } from "../../../../src/lib/session";
+import {
+  clearStateCookie,
+  HCA_STATE_COOKIE,
+  readCookie,
+  statesMatch,
+} from "../../../../src/lib/oauthState";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -9,14 +15,24 @@ export async function GET(request: Request) {
   const error = url.searchParams.get("error");
   const origin = getRequestOrigin(request);
 
+  if (!statesMatch(url.searchParams.get("state"), readCookie(request, HCA_STATE_COOKIE))) {
+    const response = NextResponse.redirect(`${origin}/?error=invalid_state`);
+    clearStateCookie(response, HCA_STATE_COOKIE);
+    return response;
+  }
+
   if (error || !code) {
-    return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(error || "missing_code")}`);
+    const response = NextResponse.redirect(`${origin}/?error=${encodeURIComponent(error || "missing_code")}`);
+    clearStateCookie(response, HCA_STATE_COOKIE);
+    return response;
   }
 
   const tokens = await exchangeCodeForTokens({ code, redirectUri: getHackclubRedirectUri(request) });
 
   if (!tokens?.access_token) {
-    return NextResponse.redirect(`${origin}/?error=token_exchange_failed`);
+    const response = NextResponse.redirect(`${origin}/?error=token_exchange_failed`);
+    clearStateCookie(response, HCA_STATE_COOKIE);
+    return response;
   }
 
   const session = await encryptSession({
@@ -30,5 +46,6 @@ export async function GET(request: Request) {
   // landing on /dashboard without it.
   const response = NextResponse.redirect(`${origin}/api/auth/hackatime/login`);
   response.cookies.set(sessionCookieOptions.name, session, sessionCookieOptions);
+  clearStateCookie(response, HCA_STATE_COOKIE);
   return response;
 }

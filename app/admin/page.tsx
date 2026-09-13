@@ -58,6 +58,12 @@ function normalizeCodeUrl(url: string): string {
 
 type Status = "Pending" | "Prereviewed" | "Approved" | "Rejected" | "Fraud";
 
+const STATUSES: Status[] = ["Pending", "Prereviewed", "Approved", "Rejected", "Fraud"];
+
+function parseStatus(value: string | undefined): Status {
+  return STATUSES.find((status) => status === value) ?? "Pending";
+}
+
 function filterFormula(status: Status) {
   if (status === "Approved") return `{${SUBMISSION_FIELDS.approved}} = TRUE()`;
   if (status === "Prereviewed") {
@@ -82,7 +88,7 @@ export default async function AdminPage({
     redirect("/");
   }
 
-  const status = ((await searchParams).status as Status) ?? "Pending";
+  const status = parseStatus((await searchParams).status);
   const records = await listSubmissions(filterFormula(status), QUEUE_FIELDS);
 
   const messagesBySubmission = await listMessagesBySubmissionIds(records.map((r) => r.id));

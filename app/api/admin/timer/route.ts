@@ -6,6 +6,7 @@ import {
   getTimerAdjustmentMinutes,
   setTimerAdjustmentMinutes,
 } from "../../../../src/lib/airtable";
+import { withLock } from "../../../../src/lib/lock";
 import { getTimerState, StreamNotConfiguredError } from "../../../../src/lib/timer";
 
 export const dynamic = "force-dynamic";
@@ -58,11 +59,12 @@ export async function POST(request: Request) {
   if (payload.reset === true) {
     nextValue = 0;
   } else if (typeof payload.deltaMinutes === "number" && Number.isInteger(payload.deltaMinutes)) {
-    // Read-add-write. Single-admin usage makes a lost-update race negligible
-    // (see design.md Risks); the dashboard also disables controls in flight.
+    const delta = payload.deltaMinutes;
     try {
-      const current = await getTimerAdjustmentMinutes();
-      nextValue = current + payload.deltaMinutes;
+      nextValue = await withLock("timer-adjustment", async () => {
+        const current = await getTimerAdjustmentMinutes();
+        return current + delta;
+      });
     } catch (err) {
       console.error("[admin-timer] reading current adjustment failed", err);
       return NextResponse.json({ error: "timer_adjustment_unavailable" }, { status: 503 });

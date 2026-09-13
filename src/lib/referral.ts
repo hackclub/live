@@ -13,6 +13,7 @@ import {
   SUBMISSION_FIELDS,
 } from "./airtable";
 import { getHackatimeMe } from "./hackatime";
+import { withLock } from "./lock";
 import type { SessionPayload } from "./session";
 
 // First-touch referral cookie set by proxy.ts when a visitor lands on
@@ -91,38 +92,40 @@ export async function payReferral(
   refereeEmail: string,
   triggeringSubmissionId: string,
 ): Promise<PayoutOutcome> {
-  const referral = await getReferralByRefereeEmailAndStatus(
-    refereeEmail,
-    REFERRAL_STATUS.pending,
-  );
-  if (!referral) return "skipped";
+  return withLock(`referral:${refereeEmail.toLowerCase()}`, async () => {
+    const referral = await getReferralByRefereeEmailAndStatus(
+      refereeEmail,
+      REFERRAL_STATUS.pending,
+    );
+    if (!referral) return "skipped";
 
-  const handle = String(referral.fields[REFERRAL_FIELDS.referrerHandle] ?? "");
-  const referrerEmail = await resolveReferrerEmail(handle);
-  if (!referrerEmail) {
-    console.warn(`[referral] payout deferred: handle "${handle}" does not resolve to an email`);
-    return "unresolved";
-  }
+    const handle = String(referral.fields[REFERRAL_FIELDS.referrerHandle] ?? "");
+    const referrerEmail = await resolveReferrerEmail(handle);
+    if (!referrerEmail) {
+      console.warn(`[referral] payout deferred: handle "${handle}" does not resolve to an email`);
+      return "unresolved";
+    }
 
-  const submissionRecordId =
-    triggeringSubmissionId ||
-    (referral.fields[REFERRAL_FIELDS.refereeSubmission] as string[] | undefined)?.[0] ||
-    "";
+    const submissionRecordId =
+      triggeringSubmissionId ||
+      (referral.fields[REFERRAL_FIELDS.refereeSubmission] as string[] | undefined)?.[0] ||
+      "";
 
-  const redemption = await createRedemption({
-    email: referrerEmail,
-    itemName: REFERRAL_REWARD_ITEM_NAME,
-    cost: 0,
+    const redemption = await createRedemption({
+      email: referrerEmail,
+      itemName: REFERRAL_REWARD_ITEM_NAME,
+      cost: 0,
+    });
+
+    await markReferralPaid({
+      referralId: referral.id,
+      referrerEmail,
+      submissionRecordId,
+      redemptionRecordId: redemption.id,
+    });
+
+    return "paid";
   });
-
-  await markReferralPaid({
-    referralId: referral.id,
-    referrerEmail,
-    submissionRecordId,
-    redemptionRecordId: redemption.id,
-  });
-
-  return "paid";
 }
 
 // The signed-in user's GitHub username, via the Hackatime identity leg.

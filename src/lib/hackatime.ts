@@ -42,7 +42,7 @@ export async function exchangeHackatimeCodeForToken({
   });
 
   if (!response.ok) {
-    console.error("[hackatime] token exchange failed", response.status, await response.text());
+    console.error("[hackatime] token exchange failed", response.status);
     return null;
   }
   return response.json();
@@ -57,7 +57,7 @@ export async function getHackatimeMe(accessToken: string): Promise<HackatimeMe |
   });
 
   if (!response.ok) {
-    console.error("[hackatime] /me failed", response.status, await response.text());
+    console.error("[hackatime] /me failed", response.status);
     return null;
   }
   const data = await response.json();
@@ -81,7 +81,7 @@ export async function getHackatimeProjects(accessToken: string): Promise<Hackati
   });
 
   if (!response.ok) {
-    console.error("[hackatime] /projects failed", response.status, await response.text());
+    console.error("[hackatime] /projects failed", response.status);
     return [];
   }
 

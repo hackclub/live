@@ -52,7 +52,15 @@ function normalizeCodeUrl(url: string): string {
     .replace(/\/+$/, "");
 }
 
-function filterFormula(status: "Pending" | "Approved" | "Rejected" | "Fraud") {
+type ReviewStatus = "Pending" | "Approved" | "Rejected" | "Fraud";
+
+const REVIEW_STATUSES: ReviewStatus[] = ["Pending", "Approved", "Rejected", "Fraud"];
+
+function parseStatus(value: string | undefined): ReviewStatus {
+  return REVIEW_STATUSES.find((status) => status === value) ?? "Pending";
+}
+
+function filterFormula(status: ReviewStatus) {
   if (status === "Approved") return `{${SUBMISSION_FIELDS.approved}} = TRUE()`;
   if (status === "Pending") {
     // Excludes submissions someone has already prechecked — those move to
@@ -77,7 +85,7 @@ export default async function ReviewPage({
     redirect("/");
   }
 
-  const status = ((await searchParams).status as "Pending" | "Approved" | "Rejected" | "Fraud") ?? "Pending";
+  const status = parseStatus((await searchParams).status);
   const allRecordsForStatus = await listSubmissions(filterFormula(status), QUEUE_FIELDS);
   // Reviewers never see their own submission, in any status tab.
   const records = allRecordsForStatus.filter(

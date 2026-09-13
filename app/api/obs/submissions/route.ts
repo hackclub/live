@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { listSubmissionsCreatedAfter, SUBMISSION_FIELDS } from "../../../../src/lib/airtable";
+import { clientIp, rateLimit } from "../../../../src/lib/rateLimit";
 
 // Unauthenticated on purpose — see app/api/obs/timer/route.ts.
 export const dynamic = "force-dynamic";
@@ -7,6 +8,10 @@ export const dynamic = "force-dynamic";
 const BACKFILL_MAX_RECORDS = 20;
 
 export async function GET(request: Request) {
+  if (!rateLimit(`obs-submissions:${clientIp(request)}`, 120, 60_000)) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
   // `since` is echoed straight into an Airtable filterByFormula downstream,
   // so anything that isn't a real timestamp is dropped here rather than
   // trusted — a non-date value would otherwise be a formula-injection
@@ -31,5 +36,7 @@ export async function GET(request: Request) {
     };
   });
 
-  return NextResponse.json(items);
+  return NextResponse.json(items, {
+    headers: { "Cache-Control": "public, s-maxage=5, stale-while-revalidate=25" },
+  });
 }

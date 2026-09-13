@@ -21,6 +21,9 @@ import { getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "..
 import { validateSubmissionInput, type SubmissionInput } from "../../../src/lib/submission";
 import { isEmailBanned } from "../../../src/lib/bans";
 
+const MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024;
+const SCREENSHOT_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+
 export async function POST(request: Request) {
   const session = await getSessionFromRequest(request);
   if (!session?.access_token || !session.hackatime_access_token) {
@@ -83,6 +86,13 @@ export async function POST(request: Request) {
   const fieldErrors = validateSubmissionInput(input);
   if (!existing && !hasScreenshot) {
     fieldErrors.screenshot = "Screenshot is required";
+  } else if (hasScreenshot) {
+    const file = screenshot as File;
+    if (file.size > MAX_SCREENSHOT_BYTES) {
+      fieldErrors.screenshot = "Screenshot must be 8 MB or smaller";
+    } else if (!SCREENSHOT_TYPES.has(file.type)) {
+      fieldErrors.screenshot = "Screenshot must be a PNG, JPEG, WebP, or GIF image";
+    }
   }
   if (Object.values(fieldErrors).some(Boolean)) {
     return NextResponse.json({ error: "validation_failed", fieldErrors }, { status: 400 });
@@ -131,7 +141,7 @@ export async function POST(request: Request) {
     "";
   const hackatimeId = hackatimeIdRaw === null || hackatimeIdRaw === undefined ? "" : String(hackatimeIdRaw);
   if (!hackatimeId) {
-    console.error("[submit] no usable Hackatime ID found on /me response:", JSON.stringify(hackatimeMe).slice(0, 2000));
+    console.error("[submit] no usable Hackatime ID found on /me response");
   }
 
   const fields: Record<string, unknown> = {
