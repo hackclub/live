@@ -81,7 +81,7 @@ export default function Home() {
 
         async function sync() {
             try {
-                const res = await fetch("/api/obs/timer", { cache: "no-store" });
+                const res = await fetch("/api/obs/timer");
                 if (!res.ok) {
                     // 503 stream_not_configured (or transient) — show a placeholder
                     // rather than a fabricated countdown. Keep the last known

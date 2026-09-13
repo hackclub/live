@@ -22,7 +22,7 @@ export default function ObsTimerPage() {
 
     async function sync() {
       try {
-        const res = await fetch("/api/obs/timer", { cache: "no-store" });
+        const res = await fetch("/api/obs/timer");
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled) setDeadline(new Date(data.deadline).getTime());

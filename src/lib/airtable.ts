@@ -277,8 +277,7 @@ export async function listSubmissionsByEmail(
   for (const field of fields ?? []) params.append("fields[]", field);
   const data = await airtableRequest<{ records: AirtableRecord[] }>(config, `?${params.toString()}`);
   // Newest first — Airtable's list API doesn't support sorting by the
-  // built-in createdTime via `sort[]`, so this sorts client-side (same
-  // approach as listSubmissionsCreatedAfter below).
+  // built-in createdTime via `sort[]`, so this sorts client-side.
   return data.records
     .slice()
     .sort((a, b) => new Date(b.createdTime ?? 0).getTime() - new Date(a.createdTime ?? 0).getTime());
@@ -621,56 +620,6 @@ export async function setTimerAdjustmentMinutes(value: number): Promise<void> {
       typecast: false,
     }),
   });
-}
-
-// For /obs-submissions: records created after `sinceIso` (or, with no
-// `sinceIso`, the most recent `maxRecords`), keyed off Airtable's built-in
-// `createdTime` rather than any field — immune to resubmit-in-place edits
-// bumping a "last updated" value and re-triggering an announcement.
-export async function listSubmissionsCreatedAfter(
-  sinceIso: string | null,
-  opts: { maxRecords?: number } = {},
-): Promise<AirtableRecord[]> {
-  const config = submissionTableConfig();
-  const fields = [SUBMISSION_FIELDS.githubUsername, SUBMISSION_FIELDS.overrideHours];
-
-  // `sinceIso` ends up interpolated into a filterByFormula string, so it is
-  // never trusted verbatim: re-parse it to a canonical ISO timestamp and
-  // reject anything else. This keeps arbitrary formula text out of the
-  // query even if a caller forgets to validate.
-  let safeSince: string | null = null;
-  if (sinceIso !== null && sinceIso !== "") {
-    const parsed = Date.parse(sinceIso);
-    if (Number.isNaN(parsed)) {
-      throw new Error("listSubmissionsCreatedAfter: `sinceIso` is not a valid timestamp");
-    }
-    safeSince = new Date(parsed).toISOString();
-  }
-
-  let records: AirtableRecord[] = [];
-  let offset: string | undefined;
-  do {
-    const params = new URLSearchParams();
-    if (safeSince) params.set("filterByFormula", `IS_AFTER(CREATED_TIME(), '${safeSince}')`);
-    for (const field of fields) params.append("fields[]", field);
-    params.set("pageSize", "100");
-    if (offset) params.set("offset", offset);
-    const data = await airtableRequest<{ records: AirtableRecord[]; offset?: string }>(
-      config,
-      `?${params.toString()}`,
-    );
-    records = records.concat(data.records);
-    offset = data.offset;
-  } while (offset);
-
-  records.sort(
-    (a, b) => new Date(a.createdTime ?? 0).getTime() - new Date(b.createdTime ?? 0).getTime(),
-  );
-
-  if (!safeSince && opts.maxRecords) {
-    return records.slice(-opts.maxRecords);
-  }
-  return records;
 }
 
 // Can't filter on the linked Submission field via filterByFormula: Airtable's
