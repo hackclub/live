@@ -51,36 +51,38 @@ export async function bindReferral({
   handle: string;
   source: (typeof REFERRAL_SOURCE)[keyof typeof REFERRAL_SOURCE];
 }): Promise<BindResult> {
-  const cleanHandle = handle.trim();
-  const fromCode = source === REFERRAL_SOURCE.code;
+  return withLock(`referral-bind:${refereeEmail.toLowerCase()}`, async () => {
+    const cleanHandle = handle.trim();
+    const fromCode = source === REFERRAL_SOURCE.code;
 
-  if (!isPlausibleGithubUsername(cleanHandle)) {
-    return { ok: false, reason: "unknown_code" };
-  }
+    if (!isPlausibleGithubUsername(cleanHandle)) {
+      return { ok: false, reason: "unknown_code" };
+    }
 
-  const referrerEmail = await resolveReferrerEmail(cleanHandle);
+    const referrerEmail = await resolveReferrerEmail(cleanHandle);
 
-  if (referrerEmail && referrerEmail.toLowerCase() === refereeEmail.toLowerCase()) {
-    return { ok: false, reason: "self_referral" };
-  }
+    if (referrerEmail && referrerEmail.toLowerCase() === refereeEmail.toLowerCase()) {
+      return { ok: false, reason: "self_referral" };
+    }
 
-  if (await getReferralByRefereeEmail(refereeEmail)) {
-    return { ok: false, reason: "already_bound" };
-  }
+    if (await getReferralByRefereeEmail(refereeEmail)) {
+      return { ok: false, reason: "already_bound" };
+    }
 
-  const ownSubmissions = await listSubmissionsByEmail(refereeEmail, [SUBMISSION_FIELDS.email]);
-  if (ownSubmissions.length > 0) {
-    return { ok: false, reason: "already_submitted" };
-  }
+    const ownSubmissions = await listSubmissionsByEmail(refereeEmail, [SUBMISSION_FIELDS.email]);
+    if (ownSubmissions.length > 0) {
+      return { ok: false, reason: "already_submitted" };
+    }
 
-  // A typed code has to point at a real person. A link can bind an
-  // as-yet-unresolvable handle — payout resolves it later.
-  if (fromCode && !referrerEmail) {
-    return { ok: false, reason: "unknown_code" };
-  }
+    // A typed code has to point at a real person. A link can bind an
+    // as-yet-unresolvable handle — payout resolves it later.
+    if (fromCode && !referrerEmail) {
+      return { ok: false, reason: "unknown_code" };
+    }
 
-  await createReferral({ refereeEmail, referrerHandle: cleanHandle, source });
-  return { ok: true, referrerHandle: cleanHandle };
+    await createReferral({ refereeEmail, referrerHandle: cleanHandle, source });
+    return { ok: true, referrerHandle: cleanHandle };
+  });
 }
 
 export type PayoutOutcome = "skipped" | "unresolved" | "paid";

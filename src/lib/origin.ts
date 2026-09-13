@@ -29,10 +29,19 @@ function allowedHosts(): string[] {
 // containers. This is what makes OAuth redirect URIs work automatically on
 // both localhost and every deployed domain without hardcoding anything.
 export function getRequestOrigin(request: Request): string {
-  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const forwardedProto = request.headers
+    .get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim()
+    .toLowerCase();
   const forwardedHost = request.headers.get("x-forwarded-host");
   const host = normalizeHost(forwardedHost || request.headers.get("host") || "");
-  const protocol = forwardedProto || (LOCAL_HOST.test(host) ? "http" : "https");
+  const protocol =
+    forwardedProto === "http" || forwardedProto === "https"
+      ? forwardedProto
+      : LOCAL_HOST.test(host)
+        ? "http"
+        : "https";
 
   if (LOCAL_HOST.test(host) || allowedHosts().includes(host)) {
     return `${protocol}://${host}`;

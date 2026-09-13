@@ -55,28 +55,23 @@ export async function POST(request: Request) {
   }
   const payload = (body ?? {}) as { deltaMinutes?: unknown; reset?: unknown };
 
-  let nextValue: number;
+  let delta = 0;
   if (payload.reset === true) {
-    nextValue = 0;
+    delta = 0;
   } else if (typeof payload.deltaMinutes === "number" && Number.isInteger(payload.deltaMinutes)) {
-    const delta = payload.deltaMinutes;
-    try {
-      nextValue = await withLock("timer-adjustment", async () => {
-        const current = await getTimerAdjustmentMinutes();
-        return current + delta;
-      });
-    } catch (err) {
-      console.error("[admin-timer] reading current adjustment failed", err);
-      return NextResponse.json({ error: "timer_adjustment_unavailable" }, { status: 503 });
-    }
+    delta = payload.deltaMinutes;
   } else {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }
 
   try {
-    await setTimerAdjustmentMinutes(nextValue);
+    await withLock("timer-adjustment", async () => {
+      const value =
+        payload.reset === true ? 0 : (await getTimerAdjustmentMinutes()) + delta;
+      await setTimerAdjustmentMinutes(value);
+    });
   } catch (err) {
-    console.error("[admin-timer] writing adjustment failed", err);
+    console.error("[admin-timer] updating adjustment failed", err);
     return NextResponse.json({ error: "timer_adjustment_unavailable" }, { status: 503 });
   }
 

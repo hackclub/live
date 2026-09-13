@@ -48,7 +48,12 @@ export async function POST(request: Request) {
 
     const newBalance = await getTokenBalance(identity.primary_email!);
     if (newBalance < 0) {
-      await deleteRedemptionRecord(redemption.id).catch(() => {});
+      try {
+        await deleteRedemptionRecord(redemption.id);
+      } catch (err) {
+        console.error("[redeem] failed to roll back redemption", redemption.id, err);
+        return { error: "rollback_failed" as const, balance: newBalance };
+      }
       return { error: "insufficient_balance" as const, balance: newBalance + item.price };
     }
 
@@ -56,7 +61,8 @@ export async function POST(request: Request) {
   });
 
   if ("error" in outcome) {
-    return NextResponse.json({ error: outcome.error, balance: outcome.balance }, { status: 400 });
+    const status = outcome.error === "rollback_failed" ? 500 : 400;
+    return NextResponse.json({ error: outcome.error, balance: outcome.balance }, { status });
   }
 
   return NextResponse.json({ ok: true, balance: outcome.balance });

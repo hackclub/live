@@ -37,11 +37,8 @@ function isHttpUrl(value: string): boolean {
 }
 
 function allHttpUrls(value: string): boolean {
-  return value
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .every(isHttpUrl);
+  const parts = value.split(",").map((part) => part.trim());
+  return parts.every((part) => part.length > 0 && isHttpUrl(part));
 }
 
 export function validateSubmissionInput(input: Partial<SubmissionInput>): SubmissionFieldErrors {

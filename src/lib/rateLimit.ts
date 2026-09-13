@@ -4,8 +4,14 @@ const buckets = new Map<string, Bucket>();
 const MAX_BUCKETS = 10_000;
 
 export function clientIp(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  return forwarded?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
+  const forwarded = request.headers
+    .get("x-forwarded-for")
+    ?.split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return forwarded?.length ? forwarded[forwarded.length - 1] : "unknown";
 }
 
 export function rateLimit(key: string, limit: number, windowMs: number): boolean {
