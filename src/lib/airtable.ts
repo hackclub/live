@@ -471,20 +471,34 @@ export async function getTokenBalance(email: string): Promise<number> {
   return earned - spent;
 }
 
+// Pages through the full result set via Airtable's `offset` token — a
+// single request silently caps at 100 records, which was truncating the
+// admin queue and every stat tile computed from it once the table grew
+// past that (see fix-admin-stats-pagination).
 export async function listSubmissions(
   filterByFormula?: string,
   fields?: string[],
 ): Promise<AirtableRecord[]> {
   const config = submissionTableConfig();
-  const params = new URLSearchParams();
-  if (filterByFormula) params.set("filterByFormula", filterByFormula);
-  // Restricting `fields[]` here means PII never leaves Airtable for the
-  // admin queue — this is a query-level guarantee, not just a render-level
-  // one (the admin page/component never even receives the values).
-  for (const field of fields ?? []) params.append("fields[]", field);
-  const query = params.toString() ? `?${params.toString()}` : "";
-  const data = await airtableRequest<{ records: AirtableRecord[] }>(config, query);
-  return data.records;
+  const records: AirtableRecord[] = [];
+  let offset: string | undefined;
+  do {
+    const params = new URLSearchParams();
+    if (filterByFormula) params.set("filterByFormula", filterByFormula);
+    // Restricting `fields[]` here means PII never leaves Airtable for the
+    // admin queue — this is a query-level guarantee, not just a render-level
+    // one (the admin page/component never even receives the values).
+    for (const field of fields ?? []) params.append("fields[]", field);
+    params.set("pageSize", "100");
+    if (offset) params.set("offset", offset);
+    const data = await airtableRequest<{ records: AirtableRecord[]; offset?: string }>(
+      config,
+      `?${params.toString()}`,
+    );
+    records.push(...data.records);
+    offset = data.offset;
+  } while (offset);
+  return records;
 }
 
 // email -> { firstName, githubUsername } for admin-dashboard display only.
