@@ -88,7 +88,7 @@ export const allShopItems: ShopItem[] = [
   { name: "GoPro HERO12 Black", price: 70, img: "/prizes/gopro.jpg", description: "record your adventures?" },
 
   // ===== 133 HOURS =====
-  { name: "Sony WH-1000XM5 Wireless Noise Canceling Headphones (Black)", price: 60, img: "/prizes/headphones.png", description: "rlly nice headphones" },
+  { name: "Sony WH-1000XM5 Wireless Noise Canceling Headphones (Black)", price: 50, img: "/prizes/headphones.png", description: "rlly nice headphones" },
 
   // ===== 200 HOURS =====
   { name: "Gaming PC with a 4060", price: 200, img: "/prizes/gaming_pc_img.webp", description: "1.1k PC grant. some people like prebuilts, others don't. i wont bat an eye as long as its a PC." },
