@@ -17,6 +17,7 @@ export const allShopItems: ShopItem[] = [
   { name: "2 hours for 5 pushups (stackable)", price: 2, img: "/prizes/pushups.jpg", description: "make the man suffer" },
   { name: "Random piece of paper from HQ", price: 3, img: "/prizes/paper.jpg", description: "who knows what it could be" },
   { name: "Hosting Credits", price: 2, img: "/prizes/hosting.png", description: "deploy your projects, 10$ grant" },
+  { name: "$15 Spotify Grant", price: 2, img: "/prizes/spotify.png", description: "tunes for those late night projects"},
 { name: "$35 Codédex Grant", price: 8, img: "/prizes/codedex_grant.png", description: "$35 toward a Codédex subscription to learn and practice coding" },
 { name: "$20 Domain Grant", price: 3, img: "/prizes/porkbun.png", description: "buying domains is p cool" },
 { name: "PineCil Soldering Iron", price: 5, img: "/prizes/pinecil.jpg", description: "precision soldering for hardware projects" },
