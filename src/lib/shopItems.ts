@@ -39,11 +39,11 @@ export const allShopItems: ShopItem[] = [
   { name: "$70 MX Master 3S Grant", price: 12, img: "/prizes/mouse.png", description: "$70 for mx master 3s" },
   // ===== 17 HOURS =====
   { name: "YubiKey 5C NFC", price: 20, img: "/prizes/yubikey.jpg", description: "secure your shi" },
-  { name: "Power Bank Grant", price: 17, img: "/prizes/powerbank.png", description: "Stay juiced up" },
 
   // ===== 20 HOURS =====
   { name: "Keychron K3 QMK Wireless Mechanical Keyboard", price: 20, img: "/prizes/keychron_k3.jpg", description: "programmable mechanical keyboard" },
   { name: "Apple Developer Program Grant", price: 17, img: "/prizes/apple_dev.png", description: "publish to the app store" },
+  { name: "$100 Power Bank Grant", price: 17, img: "/prizes/powerbank.png", description: "Stay juiced up" },
 
   // ===== 25 HOURS =====
   { name: "144Hz Curved Monitor", price: 25, img: "/prizes/minotor_pic.avif", description: "$125 dollar monitor grant for your setup" },
