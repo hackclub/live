@@ -43,6 +43,7 @@ export const allShopItems: ShopItem[] = [
   // ===== 20 HOURS =====
   { name: "Keychron K3 QMK Wireless Mechanical Keyboard", price: 20, img: "/prizes/keychron_k3.jpg", description: "programmable mechanical keyboard" },
   { name: "Apple Developer Program Grant", price: 17, img: "/prizes/apple_dev.png", description: "publish to the app store" },
+  { name: "Phone grant", price: 20, img: "/prizes/phone_grant.jpg", description: "$100 grant to get a phone so you can doomscroll" },
 
   // ===== 25 HOURS =====
   { name: "144Hz Curved Monitor", price: 25, img: "/prizes/minotor_pic.avif", description: "$125 dollar monitor grant for your setup" },
