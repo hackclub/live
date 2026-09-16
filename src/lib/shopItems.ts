@@ -95,6 +95,9 @@ export const allShopItems: ShopItem[] = [
 
   // ===== 300 HOURS =====
   { name: " wear a maid dress", price: 300, img: "/prizes/maid_dress.jpg", description: "the ultimate flex" },
+
+  // 9000 hours
+  { name: "emma wedding invitation", price: 9000, img: "/prizes/testingcat.png", description: "the best item (no travel fees included)" },
 ];
 
 export function findShopItemByName(name: string): ShopItem | undefined {
