@@ -15,6 +15,7 @@ export const allShopItems: ShopItem[] = [
 
   // ===== 2 HOURS =====
   { name: "2 hours for 5 pushups (stackable)", price: 2, img: "/prizes/pushups.jpg", description: "make the man suffer" },
+  { name: "Audio equipment grant (stackable)", price: 2, img: "https://cdn.hackclub.com/01a0ab0f-16aa-7d07-ac16-67047bbc9e96/2758005_orig.jpg", description: "10$ grant to purchase equipment to get an eargasm" },
   { name: "Random piece of paper from HQ", price: 3, img: "/prizes/paper.jpg", description: "who knows what it could be" },
   { name: "Hosting Credits", price: 2, img: "/prizes/hosting.png", description: "deploy your projects, 10$ grant" },
 { name: "$35 Codédex Grant", price: 8, img: "/prizes/codedex_grant.png", description: "$35 toward a Codédex subscription to learn and practice coding" },
