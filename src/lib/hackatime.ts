@@ -4,6 +4,13 @@ const HACKATIME_BASE = "https://hackatime.hackclub.com";
 // endpoints.
 export const HACKATIME_OAUTH_SCOPE = "profile read";
 
+export function eventStartDate(): string | null {
+  const raw = (process.env.EVENT_START_DATE ?? process.env.STREAM_START_AT ?? "").trim();
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
 export type HackatimeTokens = {
   access_token: string;
   refresh_token?: string;
@@ -18,6 +25,8 @@ export type HackatimeProject = {
   name: string;
   total_seconds: number;
   most_recent_heartbeat?: string;
+  first_heartbeat?: string;
+  last_heartbeat?: string;
   languages?: string[];
   archived?: boolean;
 };
@@ -71,12 +80,14 @@ export async function getHackatimeMe(accessToken: string): Promise<HackatimeMe |
 // not a function" when the guess is wrong, this normalizes every shape it
 // knows about and logs the raw payload once when none match, so the actual
 // shape can be read from server logs and this list extended.
-export async function getHackatimeProjects(accessToken: string): Promise<HackatimeProject[]> {
+export async function getHackatimeProjects(accessToken: string, startDate?: string | null): Promise<HackatimeProject[]> {
   
 
 
    
-  const response = await fetch(`${HACKATIME_BASE}/api/v1/authenticated/projects`, {
+  const url = new URL(`${HACKATIME_BASE}/api/v1/authenticated/projects`);
+  if (startDate) url.searchParams.set("start_date", startDate);
+  const response = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 

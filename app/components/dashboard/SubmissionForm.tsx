@@ -8,12 +8,14 @@ type Track = "software" | "hardware";
 export default function SubmissionForm({
   githubUsername,
   hackatimeProjects,
+  trackedSince,
   recordId,
   defaults,
   onSaved,
 }: {
   githubUsername: string;
   hackatimeProjects: HackatimeProjectOption[];
+  trackedSince?: string;
   recordId?: string;
   defaults?: {
     track?: Track;
@@ -99,7 +101,7 @@ export default function SubmissionForm({
             </option>
             {hackatimeProjects.map((p) => (
               <option key={p.name} value={p.name}>
-                {p.name} — {p.hours.toFixed(1)}h tracked
+                {p.name} — {p.hours.toFixed(1)}h tracked{trackedSince ? ` since ${trackedSince}` : ""}
               </option>
             ))}
           </select>
