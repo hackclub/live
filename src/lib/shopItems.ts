@@ -64,6 +64,9 @@ export const allShopItems: ShopItem[] = [
   // ===== 44 HOURS =====
   { name: "Raspberry Pi 5", price: 44, img: "/prizes/rpi5.jpg", description: "its a expensive and tiny computer" },
 
+  // ===== 50 HOURS =====
+  { name: "macbook neo", price: 44, img: "/prizes/macbook_neo.png", description: "now u can do cool stuff" },
+
   // ===== 46 HOURS =====
   { name: "Thinkpad T14 (Gen 2)", price: 46, img: "/prizes/thinkpad_laptop_img.jpg", description: "decent laptop for the price: Gen 2 14 inch FHD Intel i5-1135G7 2.4GHz 16GB RAM 128GB" },
 
