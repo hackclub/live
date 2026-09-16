@@ -20,7 +20,7 @@ import {
 import { isEmailBanned } from "../../src/lib/bans";
 import Link from "next/link";
 import Footer from "../components/Footer";
-import { getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "../../src/lib/hackatime";
+import { eventStartDate, getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "../../src/lib/hackatime";
 import SubmissionForm from "../components/dashboard/SubmissionForm";
 import SubmissionsList, { type OwnSubmission } from "../components/dashboard/SubmissionsList";
 import PurchasedPrizes, { type Redemption } from "../components/dashboard/PurchasedPrizes";
@@ -48,9 +48,11 @@ export default async function DashboardPage() {
     );
   }
 
+  const startDate = eventStartDate();
+
   const [hackatimeMe, hackatimeProjects, ownRecords, personalHours, redemptionRecords] = await Promise.all([
     getHackatimeMe(session.hackatime_access_token!),
-    getHackatimeProjects(session.hackatime_access_token!),
+    getHackatimeProjects(session.hackatime_access_token!, startDate),
     listSubmissionsByEmail(identity.primary_email),
     getPersonalApprovedHours(identity.primary_email),
     listRedemptionsByEmail(identity.primary_email),
@@ -64,8 +66,13 @@ export default async function DashboardPage() {
   }));
    console.log("personal: " +personalHours)
   const projectOptions = hackatimeProjects
-    .filter((p) => !p.archived)
-    .map((p) => ({ name: p.name, hours: trackedHoursForProject(p) }));
+    .filter((p) => !p.archived && trackedHoursForProject(p) > 0)
+    .map((p) => ({ name: p.name, hours: trackedHoursForProject(p) }))
+    .sort((a, b) => b.hours - a.hours || a.name.localeCompare(b.name));
+
+  const trackedSince = startDate
+    ? new Date(startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : undefined;
 
   // Address + birthday are authoritative from the HCA identity — used for both
   // the new-submission form and every resubmission, in place of whatever an
@@ -164,6 +171,7 @@ export default async function DashboardPage() {
           submissions={submissions}
           githubUsername={hackatimeMe?.github_username ?? ""}
           hackatimeProjects={projectOptions}
+          trackedSince={trackedSince}
         />
       </div>
 
@@ -194,6 +202,7 @@ export default async function DashboardPage() {
             <SubmissionForm
               githubUsername={hackatimeMe?.github_username ?? ""}
               hackatimeProjects={projectOptions}
+              trackedSince={trackedSince}
               defaults={identityDefaults}
             />
           ) : (

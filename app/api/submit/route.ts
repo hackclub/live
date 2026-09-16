@@ -17,7 +17,7 @@ import {
   mapIdentityAddress,
   normalizeBirthdate,
 } from "../../../src/lib/hackclub";
-import { getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "../../../src/lib/hackatime";
+import { eventStartDate, getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "../../../src/lib/hackatime";
 import { validateSubmissionInput, type SubmissionInput } from "../../../src/lib/submission";
 import { isEmailBanned } from "../../../src/lib/bans";
 
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
   if (track === "software") {
     // Hours are re-derived server-side from a fresh Hackatime call — never
     // trusted from client input.
-    const hackatimeProjects = await getHackatimeProjects(session.hackatime_access_token);
+    const hackatimeProjects = await getHackatimeProjects(session.hackatime_access_token, eventStartDate());
     const selectedProject = hackatimeProjects.find((project) => project.name === input.hackatimeProject);
     if (!selectedProject) {
       return NextResponse.json(

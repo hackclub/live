@@ -31,10 +31,12 @@ export default function SubmissionsList({
   submissions,
   githubUsername,
   hackatimeProjects,
+  trackedSince,
 }: {
   submissions: OwnSubmission[];
   githubUsername: string;
   hackatimeProjects: { name: string; hours: number }[];
+  trackedSince?: string;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -82,6 +84,7 @@ export default function SubmissionsList({
               <SubmissionForm
                 githubUsername={githubUsername}
                 hackatimeProjects={hackatimeProjects}
+                trackedSince={trackedSince}
                 recordId={s.id}
                 defaults={{
                   track: s.track,
