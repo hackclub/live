@@ -13,6 +13,9 @@ import {
   statesMatch,
 } from "../../../../../src/lib/oauthState";
 
+// OAuth callbacks are request-specific and set cookies; never cache them.
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");

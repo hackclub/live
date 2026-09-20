@@ -5,7 +5,7 @@ export type ShopItem = {
   description?: string;
 };
 
-export const allShopItems: ShopItem[] = [
+const allShopItems: ShopItem[] = [
   // ===== 1 HOUR =====
   { name: "water balloon thrown at me", price: 0.5, img: "/prizes/waterBalloonThrown.jpeg", description: "literally just throw a balloon at the founder" },
   { name: "Chrome Web Store Developer Grant", price: 1, img: "/prizes/chrome_web_store.png", description: "publish to the chrome web store" },

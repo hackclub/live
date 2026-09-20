@@ -12,8 +12,6 @@ import {
 } from "../../../src/lib/airtable";
 import ReferralsTable, { type ReferralRow } from "../../components/admin/ReferralsTable";
 
-export const dynamic = "force-dynamic";
-
 export default async function AdminReferralsPage() {
   const session = await getSession();
   if (!session?.access_token) redirect("/api/auth/login");

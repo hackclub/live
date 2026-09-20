@@ -4,17 +4,17 @@ const HACKATIME_BASE = "https://hackatime.hackclub.com";
 // endpoints.
 export const HACKATIME_OAUTH_SCOPE = "profile read";
 
-export type HackatimeTokens = {
+type HackatimeTokens = {
   access_token: string;
   refresh_token?: string;
   expires_in: number;
 };
 
-export type HackatimeMe = {
+type HackatimeMe = {
   github_username?: string;
 };
 
-export type HackatimeProject = {
+type HackatimeProject = {
   name: string;
   total_seconds: number;
   most_recent_heartbeat?: string;

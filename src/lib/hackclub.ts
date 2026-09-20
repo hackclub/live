@@ -6,7 +6,7 @@ const HACKCLUB_AUTH_BASE = "https://auth.hackclub.com";
 // and date of birth from the identity instead of asking for them in the form.
 export const HACKCLUB_OAUTH_SCOPE = "name email verification_status address birthdate";
 
-export type HackclubTokens = {
+type HackclubTokens = {
   access_token: string;
   refresh_token?: string;
   expires_in: number;
@@ -17,7 +17,7 @@ export type HackclubTokens = {
 // (see openspec change add-oauth-identity-autofill, task 1.1) — it may be an
 // OIDC-style object, a flat object, or an array of either, so it's typed
 // loosely here and normalized by `mapIdentityAddress`.
-export type HackclubIdentity = {
+type HackclubIdentity = {
   id: string;
   first_name?: string;
   last_name?: string;
@@ -30,7 +30,7 @@ export type HackclubIdentity = {
   addresses?: unknown;
 };
 
-export type MappedAddress = {
+type MappedAddress = {
   addressLine1: string;
   addressLine2: string;
   city: string;
@@ -178,7 +178,7 @@ export function normalizeBirthdate(birthdate: string | undefined | null): string
 // a full mailing address AND a parseable date of birth. The "verified" check
 // is deliberately permissive here — tune it against real `verification_status`
 // / `ysws_eligible` values (task 1.2).
-export function isIdentityVerified(identity: HackclubIdentity | null): boolean {
+function isIdentityVerified(identity: HackclubIdentity | null): boolean {
   if (!identity) return false;
   if (identity.ysws_eligible === true) return true;
   return /verified|eligible/i.test(identity.verification_status ?? "");

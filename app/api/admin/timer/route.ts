@@ -10,6 +10,7 @@ import { withLock } from "../../../../src/lib/lock";
 import { getTimerState, StreamNotConfiguredError } from "../../../../src/lib/timer";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type Gate = { ok: true; email: string } | { ok: false; response: NextResponse };
 

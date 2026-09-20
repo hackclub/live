@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-const RESYNC_MS = 5000;
+import { useObsTimer } from "../hooks/useObsTimer";
 
 function formatRemaining(ms: number) {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -14,33 +12,7 @@ function formatRemaining(ms: number) {
 }
 
 export default function ObsTimerPage() {
-  const [deadline, setDeadline] = useState<number | null>(null);
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function sync() {
-      try {
-        const res = await fetch("/api/obs/timer");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled) setDeadline(new Date(data.deadline).getTime());
-      } catch {
-        // Transient network hiccup — the next poll will retry.
-      }
-    }
-
-    sync();
-    const resyncInterval = setInterval(sync, RESYNC_MS);
-    const tickInterval = setInterval(() => setNow(Date.now()), 1000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(resyncInterval);
-      clearInterval(tickInterval);
-    };
-  }, []);
+  const { deadline, now } = useObsTimer();
 
   const remaining = deadline !== null ? deadline - now : null;
   const expired = remaining !== null && remaining <= 0;

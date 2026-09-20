@@ -46,7 +46,7 @@ export const REVIEW_STATUS = {
 } as const;
 
 // Added by this change — must exist in Airtable before use (see tasks.md 1.2).
-export const MESSAGE_FIELDS = {
+const MESSAGE_FIELDS = {
   submission: "Submission",
   sender: "Sender",
   message: "Message",
@@ -66,13 +66,13 @@ export const REDEMPTION_FIELDS = {
 } as const;
 
 // Key/value "Stream Config" table — see tasks.md 1.1. One row per setting.
-export const CONFIG_FIELDS = {
+const CONFIG_FIELDS = {
   key: "Key",
   value: "Value",
 } as const;
 
 // The single config row that holds the manual /obs-timer offset in minutes.
-export const TIMER_ADJUSTMENT_KEY = "timerAdjustmentMinutes";
+const TIMER_ADJUSTMENT_KEY = "timerAdjustmentMinutes";
 
 // Referral program — see add-referral-program. One `Referrals` row per referee,
 // plus a lazy `Referral Resolutions` map so a referrer handle (GitHub username)
@@ -89,7 +89,7 @@ export const REFERRAL_FIELDS = {
   redemption: "Redemption",
 } as const;
 
-export const REFERRAL_RESOLUTION_FIELDS = {
+const REFERRAL_RESOLUTION_FIELDS = {
   handle: "Handle",
   email: "Email",
 } as const;
@@ -185,7 +185,7 @@ function bannedUsersTableConfig() {
   return { apiKey, baseId, tableName };
 }
 
-export type AirtableRecord<TFields = Record<string, unknown>> = {
+type AirtableRecord<TFields = Record<string, unknown>> = {
   id: string;
   fields: TFields;
   createdTime?: string;
@@ -247,21 +247,6 @@ export async function deleteAirtableRecord(recordId: string): Promise<void> {
 export async function deleteRedemptionRecord(recordId: string): Promise<void> {
   const config = redemptionsTableConfig();
   await airtableRequest(config, `/${recordId}`, { method: "DELETE" });
-}
-
-// NOTE: kept for callers that only need "does this person have any record"
-// (e.g. /api/messages ownership checks). Submission create/update no longer
-// uses this to decide create-vs-update — a person can have multiple
-// records now, so that decision is made by an explicit recordId instead.
-export async function findSubmissionByEmail(email: string): Promise<AirtableRecord | null> {
-  const config = submissionTableConfig();
-  const escaped = email.replace(/'/g, "\\'");
-  const formula = encodeURIComponent(`{${SUBMISSION_FIELDS.email}} = '${escaped}'`);
-  const data = await airtableRequest<{ records: AirtableRecord[] }>(
-    config,
-    `?filterByFormula=${formula}&maxRecords=1`,
-  );
-  return data.records[0] ?? null;
 }
 
 export async function listSubmissionsByEmail(
@@ -352,7 +337,7 @@ export async function listApprovedSubmissionsBeforeForEmail(
 
 // Sums Cost across one person's Redemptions records — the "spent" side of
 // their token balance, paired with getPersonalApprovedHours' "earned" side.
-export async function sumRedeemedCost(email: string): Promise<number> {
+async function sumRedeemedCost(email: string): Promise<number> {
   const config = redemptionsTableConfig();
   const escaped = email.replace(/'/g, "\\'");
   let total = 0;
@@ -677,11 +662,6 @@ export async function listMessagesBySubmissionIds(
     offset = data.offset;
   } while (offset);
   return grouped;
-}
-
-export async function listMessages(submissionRecordId: string): Promise<AirtableRecord[]> {
-  const grouped = await listMessagesBySubmissionIds([submissionRecordId]);
-  return grouped.get(submissionRecordId) ?? [];
 }
 
 export async function createMessage({

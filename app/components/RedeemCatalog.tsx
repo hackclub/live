@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import type { ShopItem } from "../../src/lib/shopItems";
 
 export default function RedeemCatalog({
@@ -55,10 +56,10 @@ export default function RedeemCatalog({
                 <>
                   <section
                     onClick={() => setOpenItem(null)}
-                    className="fixed top-0 left-0 opacity-65 bg-black z-[99] w-screen h-screen"
+                    className="fixed top-0 left-0 opacity-65 bg-black z-99 w-screen h-screen"
                   ></section>
-                  <div className="fixed rounded-box border border-secondary p-4 bg-base-300 min-w-3/6 z-[100] top-[30%] translate-y-[-50%] left-[50%] translate-x-[-50%]">
-                    <img src={item.img} className="w-full h-40 object-cover" />
+                  <div className="fixed rounded-box border border-secondary p-4 bg-base-300 min-w-3/6 z-100 top-[30%] translate-y-[-50%] left-[50%] translate-x-[-50%]">
+                    <Image src={item.img} alt={item.name} width={640} height={160} className="w-full h-40 object-cover" />
 
                     <div className="flex gap-2 items-center flex-row">
                       <p className="text-error text-2xl">~{item.price}</p>
@@ -74,7 +75,7 @@ export default function RedeemCatalog({
 
                     <div className="grid grid-cols-2 gap-2 w-full">
                       <button onClick={() => setOpenItem(null)} className="w-full btn btn-outline mt-2">
-                        let's go back
+                        let&apos;s go back
                       </button>
                       <button
                         className="btn btn-secondary w-full mt-2"
@@ -90,9 +91,9 @@ export default function RedeemCatalog({
 
               <div
                 onClick={() => setOpenItem(item.name)}
-                className="p-3 hover:scale-105 duration-150 cursor-pointer w-fit w-40 border-b border-r border-dashed"
+                className="p-3 hover:scale-105 duration-150 cursor-pointer w-fit border-b border-r border-dashed"
               >
-                <img src={item.img} className="w-full object-cover h-40 rounded-lg" />
+                <Image src={item.img} alt={item.name} width={160} height={160} className="w-full object-cover h-40 rounded-lg" />
                 <div className="flex gap-2 items-center flex-row">
                   <p className="text-error text-2xl">~{item.price}</p>
                   <p> hours</p>

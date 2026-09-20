@@ -7,6 +7,9 @@ import {
   setStateCookie,
 } from "../../../../../src/lib/oauthState";
 
+// Each login creates a fresh state cookie; never cache this redirect.
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   const state = createState();
   const params = new URLSearchParams({
