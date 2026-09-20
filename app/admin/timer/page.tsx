@@ -5,8 +5,6 @@ import { getIdentity } from "../../../src/lib/hackclub";
 import { getTimerState, StreamNotConfiguredError, type TimerState } from "../../../src/lib/timer";
 import TimerControls from "../../components/admin/TimerControls";
 
-export const dynamic = "force-dynamic";
-
 export default async function AdminTimerPage() {
   const session = await getSession();
   if (!session?.access_token) redirect("/api/auth/login");

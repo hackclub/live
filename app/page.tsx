@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import { FaTwitch } from "react-icons/fa";
 import Link from "next/link";
 import Footer from "./components/Footer";
+import { useObsTimer } from "./hooks/useObsTimer";
 const TWITCH_CHANNEL = "plastuchino";
 
 // Banked stream time (initial + approved-hours + admin adjustment) rendered as
@@ -63,63 +64,12 @@ export default function Home() {
 
     // Synced to the real timer: same deadline the /obs-timer overlay counts to
     // (STREAM_START_AT + initial + approved-hours + the admin manual adjustment).
-    const [deadline, setDeadline] = useState<number | null>(null);
-    // Prelaunch mode (PRELAUNCH_MODE env, surfaced by /api/obs/timer): hide the
-    // Twitch player, count down to the stream start instead of the stream end.
-    const [prelaunch, setPrelaunch] = useState(false);
-    const [streamStartAt, setStreamStartAt] = useState<number | null>(null);
-    const [bankedMinutes, setBankedMinutes] = useState<number | null>(null);
-    const [now, setNow] = useState(() => Date.now());
-    const [hostname, setHostname] = useState("");
-
-
-    useEffect(() => {
-
-        setHostname(window.location.hostname);
-
-        let cancelled = false;
-
-        async function sync() {
-            try {
-                const res = await fetch("/api/obs/timer");
-                if (!res.ok) {
-                    // 503 stream_not_configured (or transient) — show a placeholder
-                    // rather than a fabricated countdown. Keep the last known
-                    // prelaunch flag so the layout doesn't flicker on a blip.
-                    if (!cancelled) {
-                        setDeadline(null);
-                        setStreamStartAt(null);
-                        setBankedMinutes(null);
-                    }
-                    return;
-                }
-                const data = await res.json();
-                if (!cancelled) {
-                    setDeadline(new Date(data.deadline).getTime());
-                    setPrelaunch(Boolean(data.prelaunch));
-                    setStreamStartAt(
-                        data.streamStartAt ? new Date(data.streamStartAt).getTime() : null,
-                    );
-                    setBankedMinutes(
-                        typeof data.bankedMinutes === "number" ? data.bankedMinutes : null,
-                    );
-                }
-            } catch {
-                // Network hiccup — the next poll retries.
-            }
-        }
-
-        sync();
-        const resync = setInterval(sync, 5000);
-        const tick = setInterval(() => setNow(Date.now()), 1000);
-
-        return () => {
-            cancelled = true;
-            clearInterval(resync);
-            clearInterval(tick);
-        };
-
-    }, [])
+    const { deadline, prelaunch, streamStartAt, bankedMinutes, now } = useObsTimer();
+    const hostname = useSyncExternalStore(
+        () => () => {},
+        () => window.location.hostname,
+        () => "",
+    );
 
 
 
@@ -152,7 +102,7 @@ export default function Home() {
                     <p>keep shipping = stream neva ends</p>
                 </div>
 
-                <Link href="/dashboard" className="btn btn-primary btn-outline btn-xl font-2 ">
+                <Link href="/dashboard" prefetch={false} className="btn btn-primary btn-outline btn-xl font-2 ">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
   <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
 </svg>
@@ -177,7 +127,7 @@ export default function Home() {
 
 
 
-        <Link href="/dashboard" className="btn btn-primary btn-outline btn-xl font-2 ">
+        <Link href="/dashboard" prefetch={false} className="btn btn-primary btn-outline btn-xl font-2 ">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
   <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
 </svg>
@@ -257,7 +207,7 @@ export default function Home() {
 <div className="text-center p-4 col-span-2 border-2 border-primary rounded-box">
 
                     <h2 className="font-2 text-4xl">get rewarded...<br/>and make me suffer</h2>
-                    <p className="font-2 mt-2">as soon as your project gets approved, the stream increases in length<br/>and you can pick something from the <Link href="/shop" className="link text-link text-blue-500">shop</Link></p>
+                    <p className="font-2 mt-2">as soon as your project gets approved, the stream increases in length<br/>and you can pick something from the <Link href="/shop" prefetch={false} className="link text-link text-blue-500">shop</Link></p>
                     {/* <p className="font-2 p-5 w-fit bg-black">1</p> */}
 
                 </div>

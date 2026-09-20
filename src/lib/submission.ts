@@ -1,4 +1,4 @@
-export type SubmissionFieldErrors = Partial<Record<string, string>>;
+type SubmissionFieldErrors = Partial<Record<string, string>>;
 
 export type SubmissionTrack = "software" | "hardware";
 
@@ -78,8 +78,4 @@ export function validateSubmissionInput(input: Partial<SubmissionInput>): Submis
   }
 
   return errors;
-}
-
-export function hasErrors(errors: SubmissionFieldErrors): boolean {
-  return Object.values(errors).some(Boolean);
 }

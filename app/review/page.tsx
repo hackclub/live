@@ -92,15 +92,13 @@ export default async function ReviewPage({
     (record) => String(record.fields[SUBMISSION_FIELDS.email] ?? "").trim().toLowerCase() !== email.toLowerCase(),
   );
 
-  const messagesBySubmission = await listMessagesBySubmissionIds(records.map((r) => r.id));
-
-  // Cross-status scan so a duplicate/already-approved Code URL is flagged
-  // no matter which status tab it's being viewed from.
-  const allRecords = await listSubmissions(undefined, DUPLICATE_CHECK_FIELDS);
-
-  // Server-side only: banned emails are never attached to AdminSubmissionRow,
-  // only reduced to a per-record `isBanned` boolean below.
-  const bannedUserRecords = await listBannedUsers();
+  const [messagesBySubmission, allRecords, bannedUserRecords] = await Promise.all([
+    listMessagesBySubmissionIds(records.map((r) => r.id)),
+    // Cross-status scan catches duplicate/already-approved Code URLs in every tab.
+    listSubmissions(undefined, DUPLICATE_CHECK_FIELDS),
+    // Banned emails stay server-side and are reduced to a boolean below.
+    listBannedUsers(),
+  ]);
   const bannedEmails = new Set(
     bannedUserRecords.map((r) => String(r.fields[BANNED_USER_FIELDS.email] ?? "").trim().toLowerCase()).filter(Boolean),
   );

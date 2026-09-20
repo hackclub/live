@@ -10,6 +10,7 @@ import {
 } from "../../../../../src/lib/airtable";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 // Same identity check as app/api/admin/timer/route.ts.
 async function requireAdmin(request: Request) {

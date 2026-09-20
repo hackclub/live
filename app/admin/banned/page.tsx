@@ -5,8 +5,6 @@ import { getIdentity } from "../../../src/lib/hackclub";
 import { BANNED_USER_FIELDS, listBannedUsers } from "../../../src/lib/airtable";
 import BannedUsersTable, { type BannedUserRow } from "../../components/admin/BannedUsersTable";
 
-export const dynamic = "force-dynamic";
-
 export default async function AdminBannedPage() {
   const session = await getSession();
   if (!session?.access_token) redirect("/api/auth/login");

@@ -10,7 +10,7 @@ export function createState(): string {
   return randomBytes(32).toString("base64url");
 }
 
-export function stateCookieOptions() {
+function stateCookieOptions() {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

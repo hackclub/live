@@ -151,7 +151,7 @@ export default async function DashboardPage() {
             </> : 
             <div className="font-2 flex flex-row items-center gap-2">
               <p>You have {personalHours.toFixed(1)} tokens. let&apos;s go </p>
-              <Link className="link text-blue-500" href="/redeem">spend em!</Link>
+              <Link className="link text-blue-500" href="/redeem" prefetch={false}>spend em!</Link>
             </div>
             
               
@@ -171,7 +171,7 @@ export default async function DashboardPage() {
         <p className="font-2 text-lg mt-4">Check out da shop</p>
         <p className="text-xs font-2">you can pr shop items that you want <a className="link text-blue-500" href="https://github.com/hackclub/live/blob/master/src/lib/shopItems.ts">here.</a></p>
 
-        <Link href="/redeem" className="btn btn-secondary font-2 mt-3 w-full btn-xl">buy now!</Link>
+        <Link href="/redeem" prefetch={false} className="btn btn-secondary font-2 mt-3 w-full btn-xl">buy now!</Link>
         <p className="font-2 text-sm">i made the button extra big so you cant miss it :)</p>
       </div>
 

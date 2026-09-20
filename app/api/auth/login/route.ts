@@ -3,6 +3,9 @@ import { HACKCLUB_OAUTH_SCOPE } from "../../../../src/lib/hackclub";
 import { getHackclubRedirectUri } from "../../../../src/lib/origin";
 import { createState, HCA_STATE_COOKIE, setStateCookie } from "../../../../src/lib/oauthState";
 
+// Each login creates a fresh state cookie; never cache this redirect.
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   const state = createState();
   const params = new URLSearchParams({

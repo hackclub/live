@@ -1,5 +1,4 @@
 import {
-  countPaidReferralsForHandle,
   createReferral,
   createRedemption,
   getReferralByRefereeEmail,
@@ -12,9 +11,7 @@ import {
   resolveReferrerEmail,
   SUBMISSION_FIELDS,
 } from "./airtable";
-import { getHackatimeMe } from "./hackatime";
 import { withLock } from "./lock";
-import type { SessionPayload } from "./session";
 
 // First-touch referral cookie set by proxy.ts when a visitor lands on
 // `/?ref=<handle>`, read once after login to bind the referee.
@@ -23,16 +20,16 @@ export const REF_COOKIE = "ref_handle";
 // The prize a successful referral buys the referrer, for free. The catalog
 // entry is `water balloon thrown at me`; the redemption row is labelled with
 // the "(referral reward)" suffix so it reads distinctly in redemption history.
-export const REFERRAL_REWARD_ITEM_NAME = "water balloon thrown at me (referral reward)";
+const REFERRAL_REWARD_ITEM_NAME = "water balloon thrown at me (referral reward)";
 
 // GitHub usernames: 1–39 chars, alphanumeric or single hyphens, no leading/
 // trailing hyphen. Used to reject junk `?ref=` values and typo'd codes before
 // they ever reach Airtable.
-export function isPlausibleGithubUsername(value: string): boolean {
+function isPlausibleGithubUsername(value: string): boolean {
   return /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?!-)){0,38}$/.test(value) && !value.endsWith("-");
 }
 
-export type BindResult =
+type BindResult =
   | { ok: true; referrerHandle: string }
   | {
       ok: false;
@@ -85,7 +82,7 @@ export async function bindReferral({
   });
 }
 
-export type PayoutOutcome = "skipped" | "unresolved" | "paid";
+type PayoutOutcome = "skipped" | "unresolved" | "paid";
 
 // Called from admin review when a submission is approved. If the submitter is
 // a pending referee, grants the referrer one free water balloon and flips the
@@ -128,23 +125,4 @@ export async function payReferral(
 
     return "paid";
   });
-}
-
-// The signed-in user's GitHub username, via the Hackatime identity leg.
-export async function getCallerGithubUsername(
-  session: SessionPayload,
-): Promise<string | null> {
-  if (!session.hackatime_access_token) return null;
-  const me = await getHackatimeMe(session.hackatime_access_token);
-  return me?.github_username?.trim() || null;
-}
-
-// Convenience for the dashboard: how many people this handle referred who
-// shipped (also the number of balloons it earned them).
-export async function getReferralStatsForHandle(handle: string): Promise<{
-  referred: number;
-  balloons: number;
-}> {
-  const referred = await countPaidReferralsForHandle(handle);
-  return { referred, balloons: referred };
 }

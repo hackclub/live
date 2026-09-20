@@ -11,8 +11,6 @@ import {
 } from "../../../src/lib/airtable";
 import PurchasesTable, { type PurchaseRow } from "../../components/admin/PurchasesTable";
 
-export const dynamic = "force-dynamic";
-
 export default async function AdminPurchasesPage() {
   const session = await getSession();
   if (!session?.access_token) redirect("/api/auth/login");
