@@ -13,6 +13,7 @@ import {
   SUBMISSION_FIELDS,
 } from "./airtable";
 import { getHackatimeMe } from "./hackatime";
+import { withLock } from "./lock";
 import type { SessionPayload } from "./session";
 
 // First-touch referral cookie set by proxy.ts when a visitor lands on
@@ -50,36 +51,38 @@ export async function bindReferral({
   handle: string;
   source: (typeof REFERRAL_SOURCE)[keyof typeof REFERRAL_SOURCE];
 }): Promise<BindResult> {
-  const cleanHandle = handle.trim();
-  const fromCode = source === REFERRAL_SOURCE.code;
+  return withLock(`referral-bind:${refereeEmail.toLowerCase()}`, async () => {
+    const cleanHandle = handle.trim();
+    const fromCode = source === REFERRAL_SOURCE.code;
 
-  if (!isPlausibleGithubUsername(cleanHandle)) {
-    return { ok: false, reason: "unknown_code" };
-  }
+    if (!isPlausibleGithubUsername(cleanHandle)) {
+      return { ok: false, reason: "unknown_code" };
+    }
 
-  const referrerEmail = await resolveReferrerEmail(cleanHandle);
+    const referrerEmail = await resolveReferrerEmail(cleanHandle);
 
-  if (referrerEmail && referrerEmail.toLowerCase() === refereeEmail.toLowerCase()) {
-    return { ok: false, reason: "self_referral" };
-  }
+    if (referrerEmail && referrerEmail.toLowerCase() === refereeEmail.toLowerCase()) {
+      return { ok: false, reason: "self_referral" };
+    }
 
-  if (await getReferralByRefereeEmail(refereeEmail)) {
-    return { ok: false, reason: "already_bound" };
-  }
+    if (await getReferralByRefereeEmail(refereeEmail)) {
+      return { ok: false, reason: "already_bound" };
+    }
 
-  const ownSubmissions = await listSubmissionsByEmail(refereeEmail, [SUBMISSION_FIELDS.email]);
-  if (ownSubmissions.length > 0) {
-    return { ok: false, reason: "already_submitted" };
-  }
+    const ownSubmissions = await listSubmissionsByEmail(refereeEmail, [SUBMISSION_FIELDS.email]);
+    if (ownSubmissions.length > 0) {
+      return { ok: false, reason: "already_submitted" };
+    }
 
-  // A typed code has to point at a real person. A link can bind an
-  // as-yet-unresolvable handle — payout resolves it later.
-  if (fromCode && !referrerEmail) {
-    return { ok: false, reason: "unknown_code" };
-  }
+    // A typed code has to point at a real person. A link can bind an
+    // as-yet-unresolvable handle — payout resolves it later.
+    if (fromCode && !referrerEmail) {
+      return { ok: false, reason: "unknown_code" };
+    }
 
-  await createReferral({ refereeEmail, referrerHandle: cleanHandle, source });
-  return { ok: true, referrerHandle: cleanHandle };
+    await createReferral({ refereeEmail, referrerHandle: cleanHandle, source });
+    return { ok: true, referrerHandle: cleanHandle };
+  });
 }
 
 export type PayoutOutcome = "skipped" | "unresolved" | "paid";
@@ -91,38 +94,40 @@ export async function payReferral(
   refereeEmail: string,
   triggeringSubmissionId: string,
 ): Promise<PayoutOutcome> {
-  const referral = await getReferralByRefereeEmailAndStatus(
-    refereeEmail,
-    REFERRAL_STATUS.pending,
-  );
-  if (!referral) return "skipped";
+  return withLock(`referral:${refereeEmail.toLowerCase()}`, async () => {
+    const referral = await getReferralByRefereeEmailAndStatus(
+      refereeEmail,
+      REFERRAL_STATUS.pending,
+    );
+    if (!referral) return "skipped";
 
-  const handle = String(referral.fields[REFERRAL_FIELDS.referrerHandle] ?? "");
-  const referrerEmail = await resolveReferrerEmail(handle);
-  if (!referrerEmail) {
-    console.warn(`[referral] payout deferred: handle "${handle}" does not resolve to an email`);
-    return "unresolved";
-  }
+    const handle = String(referral.fields[REFERRAL_FIELDS.referrerHandle] ?? "");
+    const referrerEmail = await resolveReferrerEmail(handle);
+    if (!referrerEmail) {
+      console.warn(`[referral] payout deferred: handle "${handle}" does not resolve to an email`);
+      return "unresolved";
+    }
 
-  const submissionRecordId =
-    triggeringSubmissionId ||
-    (referral.fields[REFERRAL_FIELDS.refereeSubmission] as string[] | undefined)?.[0] ||
-    "";
+    const submissionRecordId =
+      triggeringSubmissionId ||
+      (referral.fields[REFERRAL_FIELDS.refereeSubmission] as string[] | undefined)?.[0] ||
+      "";
 
-  const redemption = await createRedemption({
-    email: referrerEmail,
-    itemName: REFERRAL_REWARD_ITEM_NAME,
-    cost: 0,
+    const redemption = await createRedemption({
+      email: referrerEmail,
+      itemName: REFERRAL_REWARD_ITEM_NAME,
+      cost: 0,
+    });
+
+    await markReferralPaid({
+      referralId: referral.id,
+      referrerEmail,
+      submissionRecordId,
+      redemptionRecordId: redemption.id,
+    });
+
+    return "paid";
   });
-
-  await markReferralPaid({
-    referralId: referral.id,
-    referrerEmail,
-    submissionRecordId,
-    redemptionRecordId: redemption.id,
-  });
-
-  return "paid";
 }
 
 // The signed-in user's GitHub username, via the Hackatime identity leg.

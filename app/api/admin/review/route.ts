@@ -39,14 +39,7 @@ export async function POST(request: Request) {
   if (action === "reject" && !message) {
     return NextResponse.json({ error: "message_required" }, { status: 400 });
   }
-  // Ban is a permanent, program-wide action — stricter than every other
-  // review action, which reviewers may also take. Admin-only.
-  if (action === "ban" && !isAdmin) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
-  // Fraud is a terminal, payout-relevant verdict — reviewers only get the
-  // non-terminal `precheck` action; flagging fraud outright is admin-only.
-  if (action === "fraud" && !isAdmin) {
+  if (action !== "precheck" && !isAdmin) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

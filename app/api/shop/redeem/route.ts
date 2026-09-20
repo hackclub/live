@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { getSessionFromRequest } from "../../../../src/lib/auth";
-import { createRedemption, getTokenBalance } from "../../../../src/lib/airtable";
+import {
+  createRedemption,
+  deleteRedemptionRecord,
+  getTokenBalance,
+} from "../../../../src/lib/airtable";
 import { isEmailBanned } from "../../../../src/lib/bans";
 import { getIdentity } from "../../../../src/lib/hackclub";
+import { withLock } from "../../../../src/lib/lock";
 import { findShopItemByName } from "../../../../src/lib/shopItems";
 
 export async function POST(request: Request) {
@@ -29,13 +34,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "item_not_found" }, { status: 400 });
   }
 
-  const balance = await getTokenBalance(identity.primary_email);
-  if (balance < item.price) {
-    return NextResponse.json({ error: "insufficient_balance", balance }, { status: 400 });
+  const outcome = await withLock(`redeem:${identity.primary_email.toLowerCase()}`, async () => {
+    const balance = await getTokenBalance(identity.primary_email!);
+    if (balance < item.price) {
+      return { error: "insufficient_balance" as const, balance };
+    }
+
+    const redemption = await createRedemption({
+      email: identity.primary_email!,
+      itemName: item.name,
+      cost: item.price,
+    });
+
+    const newBalance = await getTokenBalance(identity.primary_email!);
+    if (newBalance < 0) {
+      try {
+        await deleteRedemptionRecord(redemption.id);
+      } catch (err) {
+        console.error("[redeem] failed to roll back redemption", redemption.id, err);
+        return { error: "rollback_failed" as const, balance: newBalance };
+      }
+      return { error: "insufficient_balance" as const, balance: newBalance + item.price };
+    }
+
+    return { ok: true as const, balance: newBalance };
+  });
+
+  if ("error" in outcome) {
+    const status = outcome.error === "rollback_failed" ? 500 : 400;
+    return NextResponse.json({ error: outcome.error, balance: outcome.balance }, { status });
   }
 
-  await createRedemption({ email: identity.primary_email, itemName: item.name, cost: item.price });
-  const newBalance = balance - item.price;
-
-  return NextResponse.json({ ok: true, balance: newBalance });
+  return NextResponse.json({ ok: true, balance: outcome.balance });
 }

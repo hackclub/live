@@ -6,6 +6,12 @@ import { getIdentity } from "../../../../../src/lib/hackclub";
 import { getHackatimeRedirectUri, getRequestOrigin } from "../../../../../src/lib/origin";
 import { bindReferral, REF_COOKIE } from "../../../../../src/lib/referral";
 import { encryptSession, sessionCookieOptions } from "../../../../../src/lib/session";
+import {
+  clearStateCookie,
+  HACKATIME_STATE_COOKIE,
+  readCookie,
+  statesMatch,
+} from "../../../../../src/lib/oauthState";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -13,15 +19,25 @@ export async function GET(request: Request) {
   const error = url.searchParams.get("error");
   const origin = getRequestOrigin(request);
 
+  if (!statesMatch(url.searchParams.get("state"), readCookie(request, HACKATIME_STATE_COOKIE))) {
+    const response = NextResponse.redirect(`${origin}/?error=invalid_state`);
+    clearStateCookie(response, HACKATIME_STATE_COOKIE);
+    return response;
+  }
+
   if (error || !code) {
-    return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(error || "missing_code")}`);
+    const response = NextResponse.redirect(`${origin}/?error=${encodeURIComponent(error || "missing_code")}`);
+    clearStateCookie(response, HACKATIME_STATE_COOKIE);
+    return response;
   }
 
   // This hop only makes sense after the HCA identity hop already ran and set
   // a session cookie — if it's missing, restart from the top.
   const existingSession = await getSessionFromRequest(request);
   if (!existingSession) {
-    return NextResponse.redirect(`${origin}/api/auth/login`);
+    const response = NextResponse.redirect(`${origin}/api/auth/login`);
+    clearStateCookie(response, HACKATIME_STATE_COOKIE);
+    return response;
   }
 
   const tokens = await exchangeHackatimeCodeForToken({
@@ -30,7 +46,9 @@ export async function GET(request: Request) {
   });
 
   if (!tokens?.access_token) {
-    return NextResponse.redirect(`${origin}/?error=hackatime_token_exchange_failed`);
+    const response = NextResponse.redirect(`${origin}/?error=hackatime_token_exchange_failed`);
+    clearStateCookie(response, HACKATIME_STATE_COOKIE);
+    return response;
   }
 
   const session = await encryptSession({
@@ -40,16 +58,12 @@ export async function GET(request: Request) {
 
   const response = NextResponse.redirect(`${origin}/dashboard`);
   response.cookies.set(sessionCookieOptions.name, session, sessionCookieOptions);
+  clearStateCookie(response, HACKATIME_STATE_COOKIE);
 
   // First-touch referral bind: if the visitor arrived via `/?ref=<handle>`,
   // attach them to that referrer now (they're freshly authenticated and have
   // not submitted anything yet). Never let this block the redirect.
-  const refHandle = request.headers
-    .get("cookie")
-    ?.split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${REF_COOKIE}=`))
-    ?.slice(REF_COOKIE.length + 1);
+  const refHandle = readCookie(request, REF_COOKIE);
 
   if (refHandle) {
     response.cookies.set(REF_COOKIE, "", { path: "/", maxAge: 0 });
@@ -58,7 +72,7 @@ export async function GET(request: Request) {
       if (identity?.primary_email) {
         await bindReferral({
           refereeEmail: identity.primary_email,
-          handle: decodeURIComponent(refHandle),
+          handle: refHandle,
           source: REFERRAL_SOURCE.link,
         });
       }
