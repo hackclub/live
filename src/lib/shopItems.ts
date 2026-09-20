@@ -26,6 +26,7 @@ export const allShopItems: ShopItem[] = [
    { name: "Hot Plate", price: 4, img: "/prizes/hot_plate.jpg", description: "make ramen while you code" },
    { name: "BLÅHAJ", price: 6, img: "/prizes/blahaj.jpg", description: "big big big" },
      { name: "BAOFENG UV-9R ", price: 6, img: "/prizes/baofengUV9R.jpg", description: "Dual-band handheld radio — UHF/VHF for staying in touch (or just vibing on the airwaves)" },
+     { name: "Xteink X3 Pocket eReader", price: 12, img: "/public/prizes/Xteink_X3_Pocket_eReader.webp", description: "All these other ereaders are too large. Get something that fits in your pocket."}
   // LVL 3 CLEARANCE — 15 hours
   // { name: "Casio Watch", price: 15, img: "/prizes/casio_image.jpg", description: "buy yourself a watch up to 100 dollars worth" },
   { name: "ProtonMe 1 year subscription", price: 15, img: "/prizes/protonMe.jpg", description: "we all love privacy and stuff" },
