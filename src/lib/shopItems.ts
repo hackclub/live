@@ -18,7 +18,7 @@ const allShopItems: ShopItem[] = [
   { name: "Hosting Credits", price: 2, img: "/prizes/hosting.png", description: "deploy your projects, 10$ grant" },
   { name: "$35 Codédex Grant", price: 8, img: "/prizes/codedex_grant.png", description: "$35 toward a Codédex subscription to learn and practice coding" },
   { name: "$20 Domain Grant", price: 3, img: "/prizes/porkbun.png", description: "buying domains is p cool" },
-  { name: "electric screwdriver", price: 3, img: "/prizes/screwdriver.png", description: "screw things" },
+  { name: "electric screwdriver", price: 3, img: "/prizes/screwdriver.png", description: "screw things, 20$ grant" },
   { name: "PineCil Soldering Iron", price: 5, img: "/prizes/pinecil.jpg", description: "precision soldering for hardware projects" },
   { name: "eat half a lemon", price: 5, img: "/prizes/lemon_eating.jpeg", description: "you grind, i suffer" },
   { name: "10 hours for me to eat the spiciest chip", price: 10, img: "/prizes/spicy_chip.jpg", description: "pain is temporary, glory is forever" },
