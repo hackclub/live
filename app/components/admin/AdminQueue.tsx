@@ -34,6 +34,7 @@ type Filter = (typeof FILTERS)[number];
 export default function AdminQueue({
   rows,
   filter,
+  query = "",
   tabs = FILTERS,
   showTelescreenLink = true,
   isAdmin = false,
@@ -43,6 +44,8 @@ export default function AdminQueue({
 }: {
   rows: AdminSubmissionRow[];
   filter: Filter;
+  // Active search (spans every status when non-empty).
+  query?: string;
   tabs?: readonly Filter[];
   showTelescreenLink?: boolean;
   // Ban is a permanent, program-wide action — unlike Approve/Reject/Fraud,
@@ -115,15 +118,45 @@ export default function AdminQueue({
 
   return (
     <div className="flex flex-col gap-4">
+      <form action={basePath} method="get" className="flex gap-2 items-center flex-wrap">
+        <input
+          type="search"
+          name="q"
+          defaultValue={query}
+          placeholder="Search all projects (name, URL, description, email, ID)..."
+          className="input input-bordered input-sm flex-1 min-w-64"
+        />
+        <button type="submit" className="btn btn-sm">
+          Search
+        </button>
+        {query && (
+          <a href={basePath} className="btn btn-sm btn-ghost">
+            Clear
+          </a>
+        )}
+      </form>
+
       <div className="tabs tabs-boxed w-fit">
         {tabs.map((f) => (
-          <a key={f} href={`${basePath}?status=${f}`} className={`tab ${filter === f ? "tab-active" : ""}`}>
+          <a
+            key={f}
+            href={`${basePath}?status=${f}`}
+            className={`tab ${!query && filter === f ? "tab-active" : ""}`}
+          >
             {f}
           </a>
         ))}
       </div>
 
-      {rows.length === 0 && <p className="opacity-60">No submissions in this view.</p>}
+      {query && (
+        <p className="text-sm opacity-70">
+          {rows.length} result{rows.length === 1 ? "" : "s"} for “{query}” across all statuses
+        </p>
+      )}
+
+      {rows.length === 0 && (
+        <p className="opacity-60">{query ? "No submissions match your search." : "No submissions in this view."}</p>
+      )}
 
       {rows.map((row) => {
         const storedHours = savedHoursOverride[row.id] ?? row.hours;

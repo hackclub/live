@@ -10,6 +10,7 @@ import {
   SUBMISSION_FIELDS,
   SUBMISSION_QUEUE_FIELDS,
 } from "../../src/lib/airtable";
+import { matchesSearch, normalizeQuery } from "../../src/lib/submissionSearch";
 import AdminQueue, { type AdminSubmissionRow } from "../components/admin/AdminQueue";
 
 // Reviewer-scoped variant of /admin — same queue-building logic as
@@ -59,7 +60,7 @@ function matchesStatus(fields: Record<string, unknown>, status: ReviewStatus): b
 export default async function ReviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const session = await getSession();
   if (!session?.access_token) redirect("/api/auth/login");
@@ -70,7 +71,9 @@ export default async function ReviewPage({
     redirect("/");
   }
 
-  const status = parseStatus((await searchParams).status);
+  const params = await searchParams;
+  const status = parseStatus(params.status);
+  const query = normalizeQuery(params.q);
 
   // One full-table scan serves both the active status tab and the
   // cross-status duplicate/stats view below (and, via the shared
@@ -80,7 +83,10 @@ export default async function ReviewPage({
     // Banned emails stay server-side and are reduced to a boolean below.
     listBannedUsers(),
   ]);
-  const allRecordsForStatus = allRecords.filter((record) => matchesStatus(record.fields, status));
+  // A search spans every status; otherwise show the active tab.
+  const allRecordsForStatus = allRecords.filter((record) =>
+    query ? matchesSearch(record, query) : matchesStatus(record.fields, status),
+  );
   // Reviewers never see their own submission, in any status tab.
   const records = allRecordsForStatus.filter(
     (record) => String(record.fields[SUBMISSION_FIELDS.email] ?? "").trim().toLowerCase() !== email.toLowerCase(),
@@ -179,6 +185,7 @@ export default async function ReviewPage({
       <AdminQueue
         rows={rows}
         filter={status}
+        query={query}
         tabs={["Pending", "Approved", "Rejected", "Fraud"]}
         showTelescreenLink={false}
         isAdmin={isAdminEmail(email)}

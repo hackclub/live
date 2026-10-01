@@ -10,6 +10,7 @@ import {
   SUBMISSION_FIELDS,
   SUBMISSION_QUEUE_FIELDS,
 } from "../../src/lib/airtable";
+import { matchesSearch, normalizeQuery } from "../../src/lib/submissionSearch";
 import AdminQueue, { type AdminSubmissionRow } from "../components/admin/AdminQueue";
 
 const TELESCREEN_BASE = "https://telescreen.hackclub.com/workbench/hackatime/overview";
@@ -51,7 +52,7 @@ function matchesStatus(fields: Record<string, unknown>, status: Status): boolean
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const session = await getSession();
   if (!session?.access_token) redirect("/api/auth/login");
@@ -61,7 +62,9 @@ export default async function AdminPage({
     redirect("/");
   }
 
-  const status = parseStatus((await searchParams).status);
+  const params = await searchParams;
+  const status = parseStatus(params.status);
+  const query = normalizeQuery(params.q);
 
   // One full-table scan serves both the active status tab and the
   // cross-status duplicate/stats view below — these used to be two separate
@@ -70,7 +73,10 @@ export default async function AdminPage({
     listSubmissions(undefined, SUBMISSION_QUEUE_FIELDS),
     listBannedUsers(),
   ]);
-  const records = allRecords.filter((record) => matchesStatus(record.fields, status));
+  // A search spans every status; otherwise show the active tab.
+  const records = allRecords.filter((record) =>
+    query ? matchesSearch(record, query) : matchesStatus(record.fields, status),
+  );
 
   const messagesBySubmission = await listMessagesBySubmissionIds(records.map((r) => r.id));
 
@@ -238,7 +244,7 @@ export default async function AdminPage({
           <div className="stat-desc">{Math.round(fraudHours * 10) / 10} hrs</div>
         </div>
       </div>
-      <AdminQueue rows={rows} filter={status} isAdmin />
+      <AdminQueue rows={rows} filter={status} query={query} isAdmin />
     </section>
   );
 }
