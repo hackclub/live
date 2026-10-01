@@ -39,6 +39,33 @@ export const SUBMISSION_FIELDS = {
   reviewerReviewedAt: "Reviewer Reviewed At",
 } as const;
 
+// Shared field list for the /admin and /review queue's full-table scan
+// (duplicate-code-URL detection + stats, done across every status). Both
+// pages fetch with this exact same array, in the same order, on purpose:
+// it makes their listSubmissions(undefined, ...) calls build the identical
+// querystring, so they land on the same GET-cache entry below instead of
+// each page running its own near-identical full scan — this plus the cache
+// itself is what keeps us under Airtable's per-base rate limit when an
+// admin and a reviewer are both working the queue at once.
+export const SUBMISSION_QUEUE_FIELDS = [
+  SUBMISSION_FIELDS.hackatimeId,
+  SUBMISSION_FIELDS.hackatimeProjects,
+  SUBMISSION_FIELDS.overrideHours,
+  SUBMISSION_FIELDS.overrideHoursJustification,
+  SUBMISSION_FIELDS.description,
+  SUBMISSION_FIELDS.codeUrl,
+  SUBMISSION_FIELDS.playableUrl,
+  SUBMISSION_FIELDS.lapseLinks,
+  SUBMISSION_FIELDS.screenshot,
+  SUBMISSION_FIELDS.approved,
+  SUBMISSION_FIELDS.reviewStatus,
+  SUBMISSION_FIELDS.reviewerVerdict,
+  SUBMISSION_FIELDS.reviewerJustification,
+  SUBMISSION_FIELDS.reviewerHours,
+  SUBMISSION_FIELDS.reviewerReviewedBy,
+  SUBMISSION_FIELDS.email,
+];
+
 export const REVIEW_STATUS = {
   pending: "Pending",
   rejected: "Rejected",
@@ -182,7 +209,10 @@ function bannedUsersTableConfig() {
   if (!apiKey || !baseId || !tableName) {
     throw new Error("Airtable banned users env vars are not configured");
   }
-  return { apiKey, baseId, tableName };
+  // Bans change far less often than submissions/messages — a longer cache
+  // window here is free staleness-wise and cuts another full-table scan off
+  // every /admin and /review load.
+  return { apiKey, baseId, tableName, cacheTtlMs: 60_000 };
 }
 
 type AirtableRecord<TFields = Record<string, unknown>> = {
@@ -191,30 +221,100 @@ type AirtableRecord<TFields = Record<string, unknown>> = {
   createdTime?: string;
 };
 
+// In-process cache for GET reads, keyed by table + path (which includes the
+// filterByFormula/fields[]/offset querystring). Short-lived — just enough to
+// collapse the burst of near-duplicate reads one page load causes (the admin
+// queue alone does several full-table scans) and to dedupe concurrent
+// requests for the same page across admins, which is what was tripping
+// Airtable's per-base rate limit. Any write invalidates its whole table so
+// nothing goes stale after an edit. A table config can override the TTL
+// (see bannedUsersTableConfig) for data that's safe to hold onto longer.
+const GET_CACHE_TTL_MS = 10_000;
+const getCache = new Map<string, { expires: number; promise: Promise<unknown> }>();
+
+function invalidateTableCache(tableName: string) {
+  const prefix = `${tableName}::`;
+  for (const key of getCache.keys()) {
+    if (key.startsWith(prefix)) getCache.delete(key);
+  }
+}
+
+// Hard pace on actual outbound requests, independent of the cache above —
+// this is what guarantees we never exceed Airtable's per-base rate limit
+// (5 req/s), rather than just hoping the cache window happens to cover a
+// burst of genuinely-distinct queries. Requests that would exceed the cap
+// queue up and wait for a slot instead of firing immediately. Cache hits
+// never touch this — only real network calls consume a slot.
+const AIRTABLE_MAX_REQUESTS_PER_SECOND = 4;
+const requestTimestamps: number[] = [];
+let throttleQueue: Promise<void> = Promise.resolve();
+
+function waitForAirtableSlot(): Promise<void> {
+  const acquire = throttleQueue.then(async () => {
+    for (;;) {
+      const now = Date.now();
+      while (requestTimestamps.length && now - requestTimestamps[0] >= 1000) {
+        requestTimestamps.shift();
+      }
+      if (requestTimestamps.length < AIRTABLE_MAX_REQUESTS_PER_SECOND) {
+        requestTimestamps.push(now);
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000 - (now - requestTimestamps[0]) + 5));
+    }
+  });
+  // Chain unconditionally (ignore rejection) so one failed wait doesn't wedge
+  // every request behind it.
+  throttleQueue = acquire.catch(() => {});
+  return acquire;
+}
+
 async function airtableRequest<T>(
-  { apiKey, baseId, tableName }: { apiKey: string; baseId: string; tableName: string },
+  { apiKey, baseId, tableName, cacheTtlMs }: { apiKey: string; baseId: string; tableName: string; cacheTtlMs?: number },
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  
-  const response = await fetch(
-    `${AIRTABLE_API_BASE}/${baseId}/${encodeURIComponent(tableName)}${path}`,
-    {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        ...init?.headers,
-      },
-    },
-  );
+  const method = (init?.method ?? "GET").toUpperCase();
+  const cacheKey = `${tableName}::${path}`;
 
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`Airtable request failed: ${response.status} ${detail}`);
+  if (method === "GET") {
+    const cached = getCache.get(cacheKey);
+    if (cached && cached.expires > Date.now()) {
+      return cached.promise as Promise<T>;
+    }
   }
 
-  return response.json();
+  const requestPromise = (async () => {
+    await waitForAirtableSlot();
+    const response = await fetch(
+      `${AIRTABLE_API_BASE}/${baseId}/${encodeURIComponent(tableName)}${path}`,
+      {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          ...init?.headers,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`Airtable request failed: ${response.status} ${detail}`);
+    }
+
+    return response.json();
+  })();
+
+  if (method === "GET") {
+    getCache.set(cacheKey, { expires: Date.now() + (cacheTtlMs ?? GET_CACHE_TTL_MS), promise: requestPromise });
+    // Don't let a failed request poison the cache for the full TTL.
+    requestPromise.catch(() => getCache.delete(cacheKey));
+  } else {
+    invalidateTableCache(tableName);
+  }
+
+  return requestPromise as Promise<T>;
 }
 
 export async function createAirtableRecord(fields: Record<string, unknown>): Promise<AirtableRecord> {

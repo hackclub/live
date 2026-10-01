@@ -8,38 +8,17 @@ import {
   listMessagesBySubmissionIds,
   listSubmissions,
   SUBMISSION_FIELDS,
+  SUBMISSION_QUEUE_FIELDS,
 } from "../../src/lib/airtable";
 import AdminQueue, { type AdminSubmissionRow } from "../components/admin/AdminQueue";
 
 // Reviewer-scoped variant of /admin — same queue-building logic as
 // app/admin/page.tsx (duplicated rather than factored out for now, see
 // design.md decision 3), minus the Telescreen link, timer-control link, and
-// any submission belonging to the reviewer themselves.
-const QUEUE_FIELDS = [
-  SUBMISSION_FIELDS.hackatimeId,
-  SUBMISSION_FIELDS.hackatimeProjects,
-  SUBMISSION_FIELDS.overrideHours,
-  SUBMISSION_FIELDS.description,
-  SUBMISSION_FIELDS.codeUrl,
-  SUBMISSION_FIELDS.playableUrl,
-  SUBMISSION_FIELDS.lapseLinks,
-  SUBMISSION_FIELDS.screenshot,
-  SUBMISSION_FIELDS.approved,
-  SUBMISSION_FIELDS.reviewStatus,
-  // Fetched only to filter out the reviewer's own submission server-side —
-  // never included in AdminSubmissionRow or sent to the client.
-  SUBMISSION_FIELDS.email,
-];
-
-const DUPLICATE_CHECK_FIELDS = [
-  SUBMISSION_FIELDS.codeUrl,
-  SUBMISSION_FIELDS.approved,
-  SUBMISSION_FIELDS.reviewStatus,
-  SUBMISSION_FIELDS.overrideHours,
-  // Fetched only for the server-side banned-user cross-reference below —
-  // never included in AdminSubmissionRow or sent to the client.
-  SUBMISSION_FIELDS.email,
-];
+// any submission belonging to the reviewer themselves. Fetches with the same
+// SUBMISSION_QUEUE_FIELDS array as app/admin/page.tsx on purpose, so the two
+// pages' full-table scans land on the same Airtable GET-cache entry instead
+// of each running its own near-identical scan.
 
 // Treats cosmetically different links to the same project as the same
 // Code URL — admins paste these by hand and rarely agree on protocol/www.
@@ -60,15 +39,21 @@ function parseStatus(value: string | undefined): ReviewStatus {
   return REVIEW_STATUSES.find((status) => status === value) ?? "Pending";
 }
 
-function filterFormula(status: ReviewStatus) {
-  if (status === "Approved") return `{${SUBMISSION_FIELDS.approved}} = TRUE()`;
+// Same tab logic the old Airtable filterByFormula strings encoded, now
+// applied client-side against the single full-table scan below.
+function matchesStatus(fields: Record<string, unknown>, status: ReviewStatus): boolean {
+  const approved = Boolean(fields[SUBMISSION_FIELDS.approved]);
+  const reviewStatus = String(fields[SUBMISSION_FIELDS.reviewStatus] ?? "");
+  if (status === "Approved") return approved;
   if (status === "Pending") {
     // Excludes submissions someone has already prechecked — those move to
     // the admin's Prereviewed queue and shouldn't linger in a reviewer's
     // Pending tab pending a second, redundant precheck.
-    return `AND({${SUBMISSION_FIELDS.approved}} = FALSE(), OR({${SUBMISSION_FIELDS.reviewStatus}} = 'Pending', {${SUBMISSION_FIELDS.reviewStatus}} = ''), {${SUBMISSION_FIELDS.reviewerVerdict}} = '')`;
+    const isPendingReviewStatus = reviewStatus === "Pending" || reviewStatus === "";
+    const reviewerVerdict = String(fields[SUBMISSION_FIELDS.reviewerVerdict] ?? "");
+    return !approved && isPendingReviewStatus && reviewerVerdict === "";
   }
-  return `{${SUBMISSION_FIELDS.reviewStatus}} = '${status}'`;
+  return reviewStatus === status;
 }
 
 export default async function ReviewPage({
@@ -86,19 +71,22 @@ export default async function ReviewPage({
   }
 
   const status = parseStatus((await searchParams).status);
-  const allRecordsForStatus = await listSubmissions(filterFormula(status), QUEUE_FIELDS);
+
+  // One full-table scan serves both the active status tab and the
+  // cross-status duplicate/stats view below (and, via the shared
+  // SUBMISSION_QUEUE_FIELDS cache key, an /admin load's identical scan).
+  const [allRecords, bannedUserRecords] = await Promise.all([
+    listSubmissions(undefined, SUBMISSION_QUEUE_FIELDS),
+    // Banned emails stay server-side and are reduced to a boolean below.
+    listBannedUsers(),
+  ]);
+  const allRecordsForStatus = allRecords.filter((record) => matchesStatus(record.fields, status));
   // Reviewers never see their own submission, in any status tab.
   const records = allRecordsForStatus.filter(
     (record) => String(record.fields[SUBMISSION_FIELDS.email] ?? "").trim().toLowerCase() !== email.toLowerCase(),
   );
 
-  const [messagesBySubmission, allRecords, bannedUserRecords] = await Promise.all([
-    listMessagesBySubmissionIds(records.map((r) => r.id)),
-    // Cross-status scan catches duplicate/already-approved Code URLs in every tab.
-    listSubmissions(undefined, DUPLICATE_CHECK_FIELDS),
-    // Banned emails stay server-side and are reduced to a boolean below.
-    listBannedUsers(),
-  ]);
+  const messagesBySubmission = await listMessagesBySubmissionIds(records.map((r) => r.id));
   const bannedEmails = new Set(
     bannedUserRecords.map((r) => String(r.fields[BANNED_USER_FIELDS.email] ?? "").trim().toLowerCase()).filter(Boolean),
   );

@@ -8,42 +8,12 @@ import {
   listMessagesBySubmissionIds,
   listSubmissions,
   SUBMISSION_FIELDS,
+  SUBMISSION_QUEUE_FIELDS,
 } from "../../src/lib/airtable";
 import AdminQueue, { type AdminSubmissionRow } from "../components/admin/AdminQueue";
 
 const TELESCREEN_BASE = "https://telescreen.hackclub.com/workbench/hackatime/overview";
 // https://telescreen.hackclub.com/workbench/hackatime/overview?u=3353&p=gofan-front
-// Only the fields needed to render the queue are ever fetched from
-// Airtable — Name/Email/Address/Birthday are never requested, so they can't
-// leak into this page's payload even by accident.
-const QUEUE_FIELDS = [
-  SUBMISSION_FIELDS.hackatimeId,
-  SUBMISSION_FIELDS.hackatimeProjects,
-  SUBMISSION_FIELDS.overrideHours,
-  SUBMISSION_FIELDS.description,
-  SUBMISSION_FIELDS.codeUrl,
-  SUBMISSION_FIELDS.playableUrl,
-  SUBMISSION_FIELDS.lapseLinks,
-  SUBMISSION_FIELDS.screenshot,
-  SUBMISSION_FIELDS.approved,
-  SUBMISSION_FIELDS.reviewStatus,
-  SUBMISSION_FIELDS.reviewerVerdict,
-  SUBMISSION_FIELDS.reviewerJustification,
-  SUBMISSION_FIELDS.reviewerHours,
-  SUBMISSION_FIELDS.reviewerReviewedBy,
-];
-
-const DUPLICATE_CHECK_FIELDS = [
-  SUBMISSION_FIELDS.codeUrl,
-  SUBMISSION_FIELDS.approved,
-  SUBMISSION_FIELDS.reviewStatus,
-  SUBMISSION_FIELDS.overrideHours,
-  SUBMISSION_FIELDS.overrideHoursJustification,
-  // Fetched only for the server-side banned-user cross-reference below —
-  // never included in AdminSubmissionRow or sent to the client (QUEUE_FIELDS
-  // above is the client-facing field allowlist, and never includes email).
-  SUBMISSION_FIELDS.email,
-];
 
 // Treats cosmetically different links to the same project as the same
 // Code URL — admins paste these by hand and rarely agree on protocol/www.
@@ -64,15 +34,18 @@ function parseStatus(value: string | undefined): Status {
   return STATUSES.find((status) => status === value) ?? "Pending";
 }
 
-function filterFormula(status: Status) {
-  if (status === "Approved") return `{${SUBMISSION_FIELDS.approved}} = TRUE()`;
-  if (status === "Prereviewed") {
-    return `AND({${SUBMISSION_FIELDS.reviewerVerdict}} != '', {${SUBMISSION_FIELDS.approved}} = FALSE(), OR({${SUBMISSION_FIELDS.reviewStatus}} = 'Pending', {${SUBMISSION_FIELDS.reviewStatus}} = ''))`;
-  }
-  if (status === "Pending") {
-    return `AND({${SUBMISSION_FIELDS.approved}} = FALSE(), OR({${SUBMISSION_FIELDS.reviewStatus}} = 'Pending', {${SUBMISSION_FIELDS.reviewStatus}} = ''), {${SUBMISSION_FIELDS.reviewerVerdict}} = '')`;
-  }
-  return `{${SUBMISSION_FIELDS.reviewStatus}} = '${status}'`;
+// Same tab logic the old Airtable filterByFormula strings encoded, now
+// applied client-side against the single full-table scan below — status
+// tabs no longer cost their own separate Airtable query each.
+function matchesStatus(fields: Record<string, unknown>, status: Status): boolean {
+  const approved = Boolean(fields[SUBMISSION_FIELDS.approved]);
+  const reviewStatus = String(fields[SUBMISSION_FIELDS.reviewStatus] ?? "");
+  const isPendingReviewStatus = reviewStatus === "Pending" || reviewStatus === "";
+  const reviewerVerdict = String(fields[SUBMISSION_FIELDS.reviewerVerdict] ?? "");
+  if (status === "Approved") return approved;
+  if (status === "Prereviewed") return reviewerVerdict !== "" && !approved && isPendingReviewStatus;
+  if (status === "Pending") return !approved && isPendingReviewStatus && reviewerVerdict === "";
+  return reviewStatus === status;
 }
 
 export default async function AdminPage({
@@ -89,17 +62,20 @@ export default async function AdminPage({
   }
 
   const status = parseStatus((await searchParams).status);
-  const records = await listSubmissions(filterFormula(status), QUEUE_FIELDS);
+
+  // One full-table scan serves both the active status tab and the
+  // cross-status duplicate/stats view below — these used to be two separate
+  // Airtable queries (one filtered, one not) every single page load.
+  const [allRecords, bannedUserRecords] = await Promise.all([
+    listSubmissions(undefined, SUBMISSION_QUEUE_FIELDS),
+    listBannedUsers(),
+  ]);
+  const records = allRecords.filter((record) => matchesStatus(record.fields, status));
 
   const messagesBySubmission = await listMessagesBySubmissionIds(records.map((r) => r.id));
 
-  // Cross-status scan so a duplicate/already-approved Code URL is flagged
-  // no matter which status tab it's being viewed from.
-  const allRecords = await listSubmissions(undefined, DUPLICATE_CHECK_FIELDS);
-
   // Server-side only: banned emails are never attached to AdminSubmissionRow,
   // only reduced to a per-record `isBanned` boolean below.
-  const bannedUserRecords = await listBannedUsers();
   const bannedEmails = new Set(
     bannedUserRecords.map((r) => String(r.fields[BANNED_USER_FIELDS.email] ?? "").trim().toLowerCase()).filter(Boolean),
   );
