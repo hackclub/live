@@ -54,6 +54,7 @@ export default function AdminQueue({
   const [approveMessageDraft, setApproveMessageDraft] = useState<Record<string, string>>({});
   const [hoursDraft, setHoursDraft] = useState<Record<string, string>>({});
   const [justificationDraft, setJustificationDraft] = useState<Record<string, string>>({});
+  const [savedHoursOverride, setSavedHoursOverride] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const basePath = variant === "review" ? "/review" : "/admin";
 
@@ -89,7 +90,23 @@ export default function AdminQueue({
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        window.location.reload();
+        if (action === "hours") {
+          // Hours doesn't change review status or move the row to another
+          // tab — update it locally instead of reloading the whole queue,
+          // which would wipe in-progress justification/message drafts on
+          // every other row.
+          const savedHours = Number(extra?.hours);
+          if (Number.isFinite(savedHours)) {
+            setSavedHoursOverride((s) => ({ ...s, [recordId]: savedHours }));
+          }
+          setHoursDraft((d) => {
+            const next = { ...d };
+            delete next[recordId];
+            return next;
+          });
+        } else {
+          window.location.reload();
+        }
       }
     } finally {
       setBusy(null);
@@ -109,11 +126,12 @@ export default function AdminQueue({
       {rows.length === 0 && <p className="opacity-60">No submissions in this view.</p>}
 
       {rows.map((row) => {
-        const hoursValue = hoursDraft[row.id] ?? String(row.reviewerHours ?? row.hours);
+        const storedHours = savedHoursOverride[row.id] ?? row.hours;
+        const hoursValue = hoursDraft[row.id] ?? String(row.reviewerHours ?? storedHours);
         const parsedHours = Number(hoursValue);
         const hoursValid = Number.isFinite(parsedHours) && parsedHours >= 0;
         const hoursChanged =
-          hoursValid && Math.round(parsedHours * 10) / 10 !== Math.round(row.hours * 10) / 10;
+          hoursValid && Math.round(parsedHours * 10) / 10 !== Math.round(storedHours * 10) / 10;
         const justificationValue = justificationDraft[row.id] ?? row.reviewerJustification ?? "";
         const precheckReady = hoursValid && justificationValue.trim().length > 0;
 
@@ -157,7 +175,20 @@ export default function AdminQueue({
               <a className="link" href={row.playableUrl} target="_blank" rel="noreferrer">
                 Playable URL
               </a>
-              {row.lapseLinks && <p>Lapse: {row.lapseLinks}</p>}
+              {row.lapseLinks && (
+                <p>
+                  Lapse:{" "}
+                  {row.lapseLinks
+                    .split(",")
+                    .map((link) => link.trim())
+                    .filter(Boolean)
+                    .map((link, i) => (
+                      <a key={i} className="link mr-2" href={link} target="_blank" rel="noreferrer">
+                        {link}
+                      </a>
+                    ))}
+                </p>
+              )}
               {row.hackatimeProjects && <p>Project: {row.hackatimeProjects}</p>}
               {row.hackatimeId && <p>Hackatime ID: {row.hackatimeId}</p>}
               {row.description && <p className="max-w-md whitespace-pre-wrap">Description: {row.description}</p>}
@@ -178,26 +209,50 @@ export default function AdminQueue({
               onChange={(e) => setHoursDraft((d) => ({ ...d, [row.id]: e.target.value }))}
             />
             <span className="text-xs opacity-60">
-              stored: {Math.round(row.hours * 10) / 10}h
+              stored: {Math.round(storedHours * 10) / 10}h
             </span>
             {variant === "admin" && (
               <button
                 className="btn btn-sm"
                 disabled={busy === row.id || !hoursValid || !hoursChanged}
-                onClick={() => act(row.id, "hours", { hours: parsedHours })}
+                onClick={() =>
+                  act(row.id, "hours", { hours: parsedHours, justification: justificationValue.trim() || undefined })
+                }
               >
                 Save hours
               </button>
             )}
-            <textarea
-              className="textarea textarea-bordered textarea-sm flex-1 min-w-48"
-              placeholder={
-                variant === "review" ? "Justification (required)..." : "Override justification (optional)..."
-              }
-              rows={2}
-              value={justificationValue}
-              onChange={(e) => setJustificationDraft((d) => ({ ...d, [row.id]: e.target.value }))}
-            />
+            <div className="flex flex-col gap-1 flex-1 min-w-48">
+              <textarea
+                className="textarea textarea-bordered textarea-sm"
+                placeholder={
+                  variant === "review" ? "Justification (required)..." : "Override justification (optional)..."
+                }
+                rows={2}
+                value={justificationValue}
+                onChange={(e) => setJustificationDraft((d) => ({ ...d, [row.id]: e.target.value }))}
+              />
+              {(row.hackatimeProjects || row.hackatimeId) && (
+                <button
+                  type="button"
+                  className="btn btn-xs btn-outline self-start"
+                  onClick={() =>
+                    setJustificationDraft((d) => {
+                      const current = d[row.id] ?? row.reviewerJustification ?? "";
+                      const note = [
+                        row.hackatimeProjects && `Hackatime: ${row.hackatimeProjects}`,
+                        row.hackatimeId && `(ID ${row.hackatimeId})`,
+                      ]
+                        .filter(Boolean)
+                        .join(" ");
+                      return { ...d, [row.id]: current ? `${current}\n${note}` : note };
+                    })
+                  }
+                >
+                  + Insert Hackatime info
+                </button>
+              )}
+            </div>
           </div>
 
           {variant === "review" ? (
