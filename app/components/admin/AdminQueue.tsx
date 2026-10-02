@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import MessageThread, { type ThreadMessage } from "../dashboard/MessageThread";
 import type { UnifiedInfo } from "../../../src/lib/unified";
 import { QUEUE_PAGE_SIZE } from "../../../src/lib/submissionSearch";
@@ -67,6 +67,10 @@ export default function AdminQueue({
   const [justificationDraft, setJustificationDraft] = useState<Record<string, string>>({});
   const [savedHoursOverride, setSavedHoursOverride] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [hoursStatus, setHoursStatus] = useState<Record<string, "saving" | "saved" | "error">>({});
+  const autosaveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // Latest justification per row, so a debounced save doesn't send a stale one.
+  const justificationRef = useRef<Record<string, string>>({});
   const basePath = variant === "review" ? "/review" : "/admin";
 
   async function act(
@@ -110,7 +114,10 @@ export default function AdminQueue({
           if (Number.isFinite(savedHours)) {
             setSavedHoursOverride((s) => ({ ...s, [recordId]: savedHours }));
           }
+          // Only drop the draft if it's still what we saved — the reviewer may
+          // have kept typing while the request was in flight.
           setHoursDraft((d) => {
+            if (Number(d[recordId]) !== savedHours) return d;
             const next = { ...d };
             delete next[recordId];
             return next;
@@ -122,6 +129,44 @@ export default function AdminQueue({
     } finally {
       setBusy(null);
     }
+  }
+
+  // Admins' hours edits save themselves ~1s after the last keystroke. Reviewers
+  // don't autosave: their hours only exist as part of a precheck verdict.
+  function scheduleHoursAutosave(recordId: string, value: string, storedHours: number) {
+    clearTimeout(autosaveTimers.current[recordId]);
+    const hours = Number(value);
+    const valid = value.trim() !== "" && Number.isFinite(hours) && hours >= 0;
+    if (variant !== "admin" || !valid || Math.round(hours * 10) / 10 === Math.round(storedHours * 10) / 10) {
+      return;
+    }
+    autosaveTimers.current[recordId] = setTimeout(async () => {
+      setHoursStatus((s) => ({ ...s, [recordId]: "saving" }));
+      try {
+        const res = await fetch("/api/admin/review", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recordId,
+            action: "hours",
+            hours,
+            justification: justificationRef.current[recordId]?.trim() || undefined,
+          }),
+        });
+        if (!res.ok) throw new Error("save failed");
+        const saved = Math.round(hours * 10) / 10;
+        setSavedHoursOverride((s) => ({ ...s, [recordId]: saved }));
+        setHoursDraft((d) => {
+          if (Number(d[recordId]) !== hours) return d;
+          const next = { ...d };
+          delete next[recordId];
+          return next;
+        });
+        setHoursStatus((s) => ({ ...s, [recordId]: "saved" }));
+      } catch {
+        setHoursStatus((s) => ({ ...s, [recordId]: "error" }));
+      }
+    }, 1000);
   }
 
   return (
@@ -248,10 +293,21 @@ export default function AdminQueue({
               min="0"
               className="input input-bordered input-sm w-24"
               value={hoursValue}
-              onChange={(e) => setHoursDraft((d) => ({ ...d, [row.id]: e.target.value }))}
+              onChange={(e) => {
+                setHoursDraft((d) => ({ ...d, [row.id]: e.target.value }));
+                setHoursStatus((s) => {
+                  const next = { ...s };
+                  delete next[row.id];
+                  return next;
+                });
+                scheduleHoursAutosave(row.id, e.target.value, storedHours);
+              }}
             />
             <span className="text-xs opacity-60">
               stored: {Math.round(storedHours * 10) / 10}h
+              {hoursStatus[row.id] === "saving" && " · saving…"}
+              {hoursStatus[row.id] === "saved" && " · saved ✓"}
+              {hoursStatus[row.id] === "error" && " · autosave failed — use Save hours"}
             </span>
             {variant === "admin" && (
               <button
@@ -272,7 +328,10 @@ export default function AdminQueue({
                 }
                 rows={2}
                 value={justificationValue}
-                onChange={(e) => setJustificationDraft((d) => ({ ...d, [row.id]: e.target.value }))}
+                onChange={(e) => {
+                  justificationRef.current[row.id] = e.target.value;
+                  setJustificationDraft((d) => ({ ...d, [row.id]: e.target.value }));
+                }}
               />
               {(row.hackatimeProjects || row.hackatimeId) && (
                 <button
