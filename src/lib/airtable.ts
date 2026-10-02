@@ -321,10 +321,12 @@ async function airtableRequest<T>(
 
 export async function createAirtableRecord(fields: Record<string, unknown>): Promise<AirtableRecord> {
   const config = submissionTableConfig();
-  return airtableRequest(config, "", {
+  const record = await airtableRequest<AirtableRecord>(config, "", {
     method: "POST",
     body: JSON.stringify({ fields, typecast: false }),
   });
+  patchQueueSnapshot(record);
+  return record;
 }
 
 export async function updateAirtableRecord(
@@ -332,15 +334,18 @@ export async function updateAirtableRecord(
   fields: Record<string, unknown>,
 ): Promise<AirtableRecord> {
   const config = submissionTableConfig();
-  return airtableRequest(config, `/${recordId}`, {
+  const record = await airtableRequest<AirtableRecord>(config, `/${recordId}`, {
     method: "PATCH",
     body: JSON.stringify({ fields, typecast: false }),
   });
+  patchQueueSnapshot(record);
+  return record;
 }
 
 export async function deleteAirtableRecord(recordId: string): Promise<void> {
   const config = submissionTableConfig();
   await airtableRequest(config, `/${recordId}`, { method: "DELETE" });
+  patchQueueSnapshot({ id: recordId, fields: {} }, true);
 }
 
 // Used by the admin purchases refund action — deletes a Redemptions record.
@@ -590,6 +595,66 @@ export async function listSubmissions(
     offset = data.offset;
   } while (offset);
   return records;
+}
+
+// In-memory copy of the queue's full-table scan, served stale-while-revalidate:
+// every page load after the first returns instantly, and a snapshot older than
+// SNAPSHOT_FRESH_MS is refreshed in the background rather than blocking the
+// request. Writes patch the snapshot in place (see patchQueueSnapshot) so the
+// page a reviewer reloads right after an action already reflects it. Only the
+// very first load after a (re)start pays for the scan.
+const SNAPSHOT_FRESH_MS = 30_000;
+let queueSnapshot: { records: AirtableRecord[]; fetchedAt: number } | null = null;
+let queueRefresh: Promise<void> | null = null;
+let queueWriteCount = 0;
+
+function refreshQueueSnapshot(): Promise<void> {
+  if (queueRefresh) return queueRefresh;
+  const writesAtStart = queueWriteCount;
+  queueRefresh = listSubmissions(undefined, SUBMISSION_QUEUE_FIELDS, 0)
+    .then((records) => {
+      // A write landed mid-scan, so this result may predate it — drop it and
+      // leave the (patched) snapshot marked stale for another refresh.
+      if (queueWriteCount !== writesAtStart && queueSnapshot) return;
+      queueSnapshot = { records, fetchedAt: Date.now() };
+    })
+    .finally(() => {
+      queueRefresh = null;
+    });
+  return queueRefresh;
+}
+
+export async function getQueueSnapshot(): Promise<AirtableRecord[]> {
+  if (!queueSnapshot) {
+    await refreshQueueSnapshot();
+  } else if (Date.now() - queueSnapshot.fetchedAt > SNAPSHOT_FRESH_MS) {
+    refreshQueueSnapshot().catch((err) => console.error("[queue] background refresh failed", err));
+  }
+  return queueSnapshot?.records ?? [];
+}
+
+// Applies a write's result to the snapshot and marks it stale so the next read
+// also re-syncs with Airtable in the background.
+function patchQueueSnapshot(record: AirtableRecord, removed = false) {
+  queueWriteCount += 1;
+  if (!queueSnapshot) return;
+  const queueFields = SUBMISSION_QUEUE_FIELDS as readonly string[];
+  const others = queueSnapshot.records.filter((r) => r.id !== record.id);
+  if (removed) {
+    queueSnapshot = { records: others, fetchedAt: 0 };
+    return;
+  }
+  const fields: Record<string, unknown> = {};
+  for (const name of queueFields) {
+    if (name in record.fields) fields[name] = record.fields[name];
+  }
+  const existing = queueSnapshot.records.find((r) => r.id === record.id);
+  const patched = { id: record.id, fields, createdTime: record.createdTime ?? existing?.createdTime };
+  // Keep the record's position; new records go on the end like Airtable's order.
+  const records = existing
+    ? queueSnapshot.records.map((r) => (r.id === record.id ? patched : r))
+    : [...others, patched];
+  queueSnapshot = { records, fetchedAt: 0 };
 }
 
 // email -> { firstName, githubUsername } for admin-dashboard display only.

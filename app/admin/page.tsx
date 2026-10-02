@@ -5,11 +5,10 @@ import { getIdentity } from "../../src/lib/hackclub";
 import {
   BANNED_USER_FIELDS,
   listBannedUsers,
-  listSubmissions,
+  getQueueSnapshot,
   SUBMISSION_FIELDS,
-  SUBMISSION_QUEUE_FIELDS,
 } from "../../src/lib/airtable";
-import { matchesSearch, normalizeQuery, parseLimit, QUEUE_CACHE_TTL_MS } from "../../src/lib/submissionSearch";
+import { matchesSearch, normalizeQuery, parseLimit } from "../../src/lib/submissionSearch";
 import { telescreenLink } from "../../src/lib/telescreen";
 import AdminQueue, { type AdminSubmissionRow } from "../components/admin/AdminQueue";
 
@@ -69,7 +68,7 @@ export default async function AdminPage({
   // cross-status duplicate/stats view below — these used to be two separate
   // Airtable queries (one filtered, one not) every single page load.
   const [allRecords, bannedUserRecords] = await Promise.all([
-    listSubmissions(undefined, SUBMISSION_QUEUE_FIELDS, QUEUE_CACHE_TTL_MS),
+    getQueueSnapshot(),
     listBannedUsers(),
   ]);
   // A search spans every status; otherwise show the active tab.

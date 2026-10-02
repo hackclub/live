@@ -5,11 +5,10 @@ import { getIdentity } from "../../src/lib/hackclub";
 import {
   BANNED_USER_FIELDS,
   listBannedUsers,
-  listSubmissions,
+  getQueueSnapshot,
   SUBMISSION_FIELDS,
-  SUBMISSION_QUEUE_FIELDS,
 } from "../../src/lib/airtable";
-import { matchesSearch, normalizeQuery, parseLimit, QUEUE_CACHE_TTL_MS } from "../../src/lib/submissionSearch";
+import { matchesSearch, normalizeQuery, parseLimit } from "../../src/lib/submissionSearch";
 import AdminQueue, { type AdminSubmissionRow } from "../components/admin/AdminQueue";
 
 // Reviewer-scoped variant of /admin — same queue-building logic as
@@ -79,7 +78,7 @@ export default async function ReviewPage({
   // cross-status duplicate/stats view below (and, via the shared
   // SUBMISSION_QUEUE_FIELDS cache key, an /admin load's identical scan).
   const [allRecords, bannedUserRecords] = await Promise.all([
-    listSubmissions(undefined, SUBMISSION_QUEUE_FIELDS, QUEUE_CACHE_TTL_MS),
+    getQueueSnapshot(),
     // Banned emails stay server-side and are reduced to a boolean below.
     listBannedUsers(),
   ]);

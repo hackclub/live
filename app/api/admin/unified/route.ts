@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { listSubmissions, SUBMISSION_FIELDS, SUBMISSION_QUEUE_FIELDS } from "../../../../src/lib/airtable";
-import { QUEUE_CACHE_TTL_MS } from "../../../../src/lib/submissionSearch";
+import { getQueueSnapshot, SUBMISSION_FIELDS } from "../../../../src/lib/airtable";
 import { lookupUnifiedForRecords } from "../../../../src/lib/unified";
 import { RECORD_ID_PATTERN, requireQueueAccess } from "../../../../src/lib/queueAuth";
 
@@ -15,7 +14,7 @@ export async function GET(request: Request) {
   if (!RECORD_ID_PATTERN.test(id)) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }
-  const records = await listSubmissions(undefined, SUBMISSION_QUEUE_FIELDS, QUEUE_CACHE_TTL_MS);
+  const records = await getQueueSnapshot();
   const record = records.find((r) => r.id === id);
   if (!record) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
