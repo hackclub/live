@@ -56,6 +56,45 @@ function statusBadgeClass(status: Filter): string {
   }
 }
 
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+// Hours/deflation lines are derived from the row's hours at load vs. the
+// current value in the Hours box.
+function infoBlock(row: AdminSubmissionRow, hours: number): string {
+  const parts = [
+    row.codeUrl.trim(),
+    row.playableUrl.trim() && `demo: ${row.playableUrl.trim()}`,
+    row.hackatimeProjects.trim() && `Project: ${row.hackatimeProjects.trim()}`,
+    row.hackatimeId.trim() && `Hackatime ID: ${row.hackatimeId.trim()}`,
+    `Hours: ${round1(hours)}\nDeflated by: ${round1(Math.max(0, row.hours - hours))}`,
+  ];
+  return parts.filter(Boolean).join("\n\n");
+}
+
+const INFO_LINE = /^(demo|Project|Hackatime ID|Hours|Deflated by):/i;
+
+// Puts a fresh info block at the top, first dropping any lines a previous
+// block left behind, so "Update info" never duplicates anything. Whatever else
+// the reviewer typed is kept underneath.
+function withInfo(current: string, row: AdminSubmissionRow, hours: number): string {
+  const skip = new Set([row.codeUrl.trim(), row.telescreenLink].filter(Boolean));
+  const rest = current
+    .split("\n")
+    .filter((line) => !INFO_LINE.test(line.trim()) && !skip.has(line.trim()))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  const block = infoBlock(row, hours);
+  return rest ? `${block}\n\n${rest}` : block;
+}
+
+// Keeps the Hours / Deflated by lines in step with the Hours box.
+function syncHoursLines(text: string, row: AdminSubmissionRow, hours: number): string {
+  return text
+    .replace(/^Hours:.*$/m, `Hours: ${round1(hours)}`)
+    .replace(/^Deflated by:.*$/m, `Deflated by: ${round1(Math.max(0, row.hours - hours))}`);
+}
+
 export default function AdminQueue({
   rows,
   filter,
@@ -242,7 +281,11 @@ export default function AdminQueue({
         const hoursValid = Number.isFinite(parsedHours) && parsedHours >= 0;
         const hoursChanged =
           hoursValid && Math.round(parsedHours * 10) / 10 !== Math.round(storedHours * 10) / 10;
-        const justificationValue = justificationDraft[row.id] ?? row.reviewerJustification ?? "";
+        const justificationValue =
+          justificationDraft[row.id] ??
+          (row.reviewerJustification || infoBlock(row, hoursValid ? parsedHours : storedHours));
+        // The autosave timer reads this, so it must see prefilled text too.
+        justificationRef.current[row.id] = justificationValue;
         const precheckReady = hoursValid && justificationValue.trim().length > 0;
 
         return (
@@ -319,6 +362,12 @@ export default function AdminQueue({
               value={hoursValue}
               onChange={(e) => {
                 setHoursDraft((d) => ({ ...d, [row.id]: e.target.value }));
+                const typed = Number(e.target.value);
+                if (e.target.value.trim() !== "" && Number.isFinite(typed) && typed >= 0) {
+                  const next = syncHoursLines(justificationValue, row, typed);
+                  justificationRef.current[row.id] = next;
+                  setJustificationDraft((d) => ({ ...d, [row.id]: next }));
+                }
                 setHoursStatus((s) => {
                   const next = { ...s };
                   delete next[row.id];
@@ -357,27 +406,17 @@ export default function AdminQueue({
                   setJustificationDraft((d) => ({ ...d, [row.id]: e.target.value }));
                 }}
               />
-              {(row.hackatimeProjects || row.hackatimeId) && (
-                <button
-                  type="button"
-                  className="btn btn-xs btn-outline self-start"
-                  onClick={() =>
-                    setJustificationDraft((d) => {
-                      const current = d[row.id] ?? row.reviewerJustification ?? "";
-                      const note = [
-                        row.hackatimeProjects && `Hackatime: ${row.hackatimeProjects}`,
-                        row.hackatimeId && `(ID ${row.hackatimeId})`,
-                        row.telescreenLink,
-                      ]
-                        .filter(Boolean)
-                        .join(" ");
-                      return { ...d, [row.id]: current ? `${current}\n${note}` : note };
-                    })
-                  }
-                >
-                  + Insert Hackatime info
-                </button>
-              )}
+              <button
+                type="button"
+                className="btn btn-xs btn-outline self-start"
+                onClick={() => {
+                  const next = withInfo(justificationValue, row, hoursValid ? parsedHours : storedHours);
+                  justificationRef.current[row.id] = next;
+                  setJustificationDraft((d) => ({ ...d, [row.id]: next }));
+                }}
+              >
+                {/^(Project|Hackatime ID):/m.test(justificationValue) ? "Update info" : "Add info"}
+              </button>
             </div>
           </div>
 
@@ -416,7 +455,7 @@ export default function AdminQueue({
               onClick={() =>
                 act(row.id, "approve", {
                   hours: parsedHours,
-                  justification: justificationDraft[row.id]?.trim() || undefined,
+                  justification: justificationValue.trim() || undefined,
                 })
               }
             >
