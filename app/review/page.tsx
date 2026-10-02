@@ -30,9 +30,9 @@ function normalizeCodeUrl(url: string): string {
     .replace(/\/+$/, "");
 }
 
-type ReviewStatus = "Pending" | "Approved" | "Rejected" | "Fraud";
+type ReviewStatus = "Pending" | "Prereviewed" | "Approved" | "Rejected" | "Fraud";
 
-const REVIEW_STATUSES: ReviewStatus[] = ["Pending", "Approved", "Rejected", "Fraud"];
+const REVIEW_STATUSES: ReviewStatus[] = ["Pending", "Prereviewed", "Approved", "Rejected", "Fraud"];
 
 function parseStatus(value: string | undefined): ReviewStatus {
   return REVIEW_STATUSES.find((status) => status === value) ?? "Pending";
@@ -40,10 +40,22 @@ function parseStatus(value: string | undefined): ReviewStatus {
 
 // Same tab logic the old Airtable filterByFormula strings encoded, now
 // applied client-side against the single full-table scan below.
-function matchesStatus(fields: Record<string, unknown>, status: ReviewStatus): boolean {
+function matchesStatus(fields: Record<string, unknown>, status: ReviewStatus, email: string): boolean {
   const approved = Boolean(fields[SUBMISSION_FIELDS.approved]);
   const reviewStatus = String(fields[SUBMISSION_FIELDS.reviewStatus] ?? "");
   if (status === "Approved") return approved;
+  if (status === "Prereviewed") {
+    // The reviewer's own recommendations that an admin hasn't finalized yet,
+    // so they can still read back what they wrote.
+    const isPendingReviewStatus = reviewStatus === "Pending" || reviewStatus === "";
+    const reviewedBy = String(fields[SUBMISSION_FIELDS.reviewerReviewedBy] ?? "").trim().toLowerCase();
+    return (
+      !approved &&
+      isPendingReviewStatus &&
+      String(fields[SUBMISSION_FIELDS.reviewerVerdict] ?? "") !== "" &&
+      reviewedBy === email.toLowerCase()
+    );
+  }
   if (status === "Pending") {
     // Excludes submissions someone has already prechecked — those move to
     // the admin's Prereviewed queue and shouldn't linger in a reviewer's
@@ -84,7 +96,7 @@ export default async function ReviewPage({
   ]);
   // A search spans every status; otherwise show the active tab.
   const allRecordsForStatus = allRecords.filter((record) =>
-    query ? matchesSearch(record, query) : matchesStatus(record.fields, status),
+    query ? matchesSearch(record, query) : matchesStatus(record.fields, status, email),
   );
   // Reviewers never see their own submission, in any status tab.
   const records = allRecordsForStatus.filter(
@@ -186,7 +198,7 @@ export default async function ReviewPage({
         hasMore={records.length > limit}
         limit={limit}
         total={records.length}
-        tabs={["Pending", "Approved", "Rejected", "Fraud"]}
+        tabs={["Pending", "Prereviewed", "Approved", "Rejected", "Fraud"]}
         showTelescreenLink={false}
         isAdmin={isAdminEmail(email)}
         variant="review"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import MessageThread, { type ThreadMessage } from "../dashboard/MessageThread";
 import type { UnifiedInfo } from "../../../src/lib/unified";
 import { QUEUE_PAGE_SIZE } from "../../../src/lib/submissionSearch";
@@ -130,6 +131,12 @@ export default function AdminQueue({
   const [justificationDraft, setJustificationDraft] = useState<Record<string, string>>({});
   const [savedHoursOverride, setSavedHoursOverride] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  // What each row became after a successful action. The queue is served from a
+  // cache that can lag a write (another server instance, a refresh in flight),
+  // so a row you just finished never reappears in its old tab because of it.
+  const [statusOverride, setStatusOverride] = useState<Record<string, Filter>>({});
+  const [actionError, setActionError] = useState<Record<string, string>>({});
+  const router = useRouter();
   const [hoursStatus, setHoursStatus] = useState<Record<string, "saving" | "saved" | "error">>({});
   const autosaveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   // Latest justification per row, so a debounced save doesn't send a stale one.
@@ -161,6 +168,11 @@ export default function AdminQueue({
     if (isPrecheck) payload.verdict = action;
 
     setBusy(recordId);
+    setActionError((e) => {
+      const next = { ...e };
+      delete next[recordId];
+      return next;
+    });
     try {
       const res = await fetch("/api/admin/review", {
         method: "POST",
@@ -185,10 +197,31 @@ export default function AdminQueue({
             delete next[recordId];
             return next;
           });
-        } else {
+        } else if (action === "ban") {
           window.location.reload();
+        } else {
+          setStatusOverride((s) => ({
+            ...s,
+            [recordId]: isPrecheck
+              ? "Prereviewed"
+              : action === "approve"
+                ? "Approved"
+                : action === "reject"
+                  ? "Rejected"
+                  : "Fraud",
+          }));
+          // Re-renders the server-side counts without losing other rows' drafts.
+          router.refresh();
         }
+      } else {
+        const body = await res.json().catch(() => null);
+        setActionError((e) => ({
+          ...e,
+          [recordId]: `Not saved (${res.status}${body?.error ? `: ${body.error}` : ""}) — nothing changed, try again.`,
+        }));
       }
+    } catch {
+      setActionError((e) => ({ ...e, [recordId]: "Not saved — network error, try again." }));
     } finally {
       setBusy(null);
     }
@@ -274,7 +307,11 @@ export default function AdminQueue({
         <p className="opacity-60">{query ? "No submissions match your search." : "No submissions in this view."}</p>
       )}
 
-      {rows.map((row) => {
+      {rows
+        // On a status tab, a row that just moved elsewhere drops out; in a
+        // search (all statuses) it stays and its badge updates.
+        .filter((row) => query || !statusOverride[row.id] || statusOverride[row.id] === filter)
+        .map((row) => {
         const storedHours = savedHoursOverride[row.id] ?? row.hours;
         const hoursValue = hoursDraft[row.id] ?? String(row.reviewerHours ?? storedHours);
         const parsedHours = Number(hoursValue);
@@ -302,7 +339,7 @@ export default function AdminQueue({
               {" "}({row.duplicateRecordIds.join(", ")})
             </div>
           )}
-          {variant === "admin" && row.reviewerVerdict && (
+          {row.reviewerVerdict && (
             <div className="alert alert-info py-2 text-sm flex-col items-start gap-1">
               <span>
                 Prereviewed by {row.reviewerReviewedBy ?? "a reviewer"}: <strong>{row.reviewerVerdict}</strong>
@@ -347,7 +384,9 @@ export default function AdminQueue({
               {row.hackatimeId && <p>Hackatime ID: {row.hackatimeId}</p>}
               {row.description && <p className="max-w-md whitespace-pre-wrap">Description: {row.description}</p>}
               <p>
-                <span className={`badge ${statusBadgeClass(rowStatus(row))}`}>{rowStatus(row)}</span>
+                <span className={`badge ${statusBadgeClass(statusOverride[row.id] ?? rowStatus(row))}`}>
+                  {statusOverride[row.id] ?? rowStatus(row)}
+                </span>
               </p>
             </div>
           </div>
@@ -502,6 +541,8 @@ export default function AdminQueue({
             )}
           </div>
           )}
+
+          {actionError[row.id] && <div className="alert alert-error py-2 text-sm">{actionError[row.id]}</div>}
 
           <MessagesSection recordId={row.id} />
         </div>
