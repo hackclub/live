@@ -32,6 +32,30 @@ export type AdminSubmissionRow = {
 const FILTERS = ["Pending", "Prereviewed", "Approved", "Rejected", "Fraud"] as const;
 type Filter = (typeof FILTERS)[number];
 
+// Mirrors the tab logic in app/admin/page.tsx so a search result (which spans
+// every status) says which tab the row lives in.
+function rowStatus(row: AdminSubmissionRow): Filter {
+  if (row.approved) return "Approved";
+  if (row.reviewStatus === "Rejected") return "Rejected";
+  if (row.reviewStatus === "Fraud") return "Fraud";
+  return row.reviewerVerdict ? "Prereviewed" : "Pending";
+}
+
+function statusBadgeClass(status: Filter): string {
+  switch (status) {
+    case "Approved":
+      return "badge-success";
+    case "Rejected":
+      return "badge-warning";
+    case "Fraud":
+      return "badge-error";
+    case "Prereviewed":
+      return "badge-info";
+    default:
+      return "badge-ghost";
+  }
+}
+
 export default function AdminQueue({
   rows,
   filter,
@@ -279,8 +303,8 @@ export default function AdminQueue({
               {row.hackatimeProjects && <p>Project: {row.hackatimeProjects}</p>}
               {row.hackatimeId && <p>Hackatime ID: {row.hackatimeId}</p>}
               {row.description && <p className="max-w-md whitespace-pre-wrap">Description: {row.description}</p>}
-              <p className="opacity-60">
-                {row.approved ? "Approved" : row.reviewStatus}
+              <p>
+                <span className={`badge ${statusBadgeClass(rowStatus(row))}`}>{rowStatus(row)}</span>
               </p>
             </div>
           </div>
