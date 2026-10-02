@@ -12,6 +12,7 @@ import {
 import { getIdentity } from "../../../../src/lib/hackclub";
 import { payReferral } from "../../../../src/lib/referral";
 import { banEmail } from "../../../../src/lib/bans";
+import { telescreenLink, withTelescreenLink } from "../../../../src/lib/telescreen";
 
 const ACTIONS = ["approve", "reject", "fraud", "hours", "ban", "precheck"] as const;
 type Action = (typeof ACTIONS)[number];
@@ -66,6 +67,20 @@ export async function POST(request: Request) {
 
   const reviewedAt = new Date().toISOString();
 
+  // Final (admin) actions write the Telescreen link, filtered to the
+  // submitted project, into the override justification so it travels with the
+  // record to Unified. Keeps whatever justification already exists.
+  const hackatimeId = String(target?.fields[SUBMISSION_FIELDS.hackatimeId] ?? "").trim();
+  const justificationWithLink = (provided: unknown): string | undefined => {
+    if (!hackatimeId) return provided === undefined ? undefined : String(provided).trim();
+    const existing = String(target?.fields[SUBMISSION_FIELDS.overrideHoursJustification] ?? "");
+    const base = provided === undefined ? existing : String(provided);
+    return withTelescreenLink(
+      base,
+      telescreenLink(hackatimeId, String(target?.fields[SUBMISSION_FIELDS.hackatimeProjects] ?? "")),
+    );
+  };
+
   // "hours" is an adjustment action, not a verdict — it only rewrites the
   // record's hours (letting a reviewer deflate an over-counted Hackatime
   // figure before approving) and leaves Approved / Review Status untouched.
@@ -79,8 +94,9 @@ export async function POST(request: Request) {
       [SUBMISSION_FIELDS.reviewedAt]: reviewedAt,
       [SUBMISSION_FIELDS.reviewedBy]: identity.primary_email,
     };
-    if (body.justification !== undefined) {
-      hoursFields[SUBMISSION_FIELDS.overrideHoursJustification] = String(body.justification).trim();
+    const hoursJustification = justificationWithLink(body.justification);
+    if (hoursJustification !== undefined) {
+      hoursFields[SUBMISSION_FIELDS.overrideHoursJustification] = hoursJustification;
     }
     await updateAirtableRecord(recordId, hoursFields);
     return NextResponse.json({ ok: true });
@@ -132,9 +148,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "invalid_hours" }, { status: 400 });
       }
       reviewFields[SUBMISSION_FIELDS.overrideHours] = Math.round(hours * 10) / 10;
-      reviewFields[SUBMISSION_FIELDS.overrideHoursJustification] = String(
-        body.justification ?? "",
-      ).trim();
+    }
+    const approveJustification = justificationWithLink(body.hours !== undefined ? (body.justification ?? "") : undefined);
+    if (approveJustification !== undefined) {
+      reviewFields[SUBMISSION_FIELDS.overrideHoursJustification] = approveJustification;
     }
   } else if (action === "reject") {
     reviewFields[SUBMISSION_FIELDS.reviewStatus] = REVIEW_STATUS.rejected;

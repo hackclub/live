@@ -11,11 +11,10 @@ import {
   SUBMISSION_QUEUE_FIELDS,
 } from "../../src/lib/airtable";
 import { matchesSearch, normalizeQuery } from "../../src/lib/submissionSearch";
+import { telescreenLink } from "../../src/lib/telescreen";
 import { lookupUnifiedForRecords } from "../../src/lib/unified";
 import AdminQueue, { type AdminSubmissionRow } from "../components/admin/AdminQueue";
 
-const TELESCREEN_BASE = "https://telescreen.hackclub.com/workbench/hackatime/overview";
-// https://telescreen.hackclub.com/workbench/hackatime/overview?u=3353&p=gofan-front
 
 // Treats cosmetically different links to the same project as the same
 // Code URL — admins paste these by hand and rarely agree on protocol/www.
@@ -172,7 +171,7 @@ export default async function AdminPage({
     return {
       id: record.id,
       hackatimeId,
-      telescreenLink: `${TELESCREEN_BASE}?u=${encodeURIComponent(hackatimeId)}`,
+      telescreenLink: telescreenLink(hackatimeId, String(record.fields[SUBMISSION_FIELDS.hackatimeProjects] ?? "")),
       codeUrl: String(record.fields[SUBMISSION_FIELDS.codeUrl] ?? ""),
       playableUrl: String(record.fields[SUBMISSION_FIELDS.playableUrl] ?? ""),
       lapseLinks: String(record.fields[SUBMISSION_FIELDS.lapseLinks] ?? ""),

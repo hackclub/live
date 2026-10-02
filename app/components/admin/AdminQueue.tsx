@@ -309,6 +309,7 @@ export default function AdminQueue({
                       const note = [
                         row.hackatimeProjects && `Hackatime: ${row.hackatimeProjects}`,
                         row.hackatimeId && `(ID ${row.hackatimeId})`,
+                        row.telescreenLink,
                       ]
                         .filter(Boolean)
                         .join(" ");
