@@ -62,16 +62,16 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 // current value in the Hours box.
 function infoBlock(row: AdminSubmissionRow, hours: number): string {
   const parts = [
-    row.codeUrl.trim(),
+    row.codeUrl.trim() && `Code URL: ${row.codeUrl.trim()}`,
     row.playableUrl.trim() && `demo: ${row.playableUrl.trim()}`,
     row.hackatimeProjects.trim() && `Project: ${row.hackatimeProjects.trim()}`,
     row.hackatimeId.trim() && `Hackatime ID: ${row.hackatimeId.trim()}`,
-    `Hours: ${round1(hours)}\nDeflated by: ${round1(Math.max(0, row.hours - hours))}`,
+    `Hours: ${round1(row.hours)}\nDeflated by: ${round1(Math.max(0, row.hours - hours))}\nTotal hours: ${round1(hours)}`,
   ];
   return parts.filter(Boolean).join("\n\n");
 }
 
-const INFO_LINE = /^(demo|Project|Hackatime ID|Hours|Deflated by):/i;
+const INFO_LINE = /^(Code URL|demo|Project|Hackatime ID|Hours|Deflated by|Total hours):/i;
 
 // Puts a fresh info block at the top, first dropping any lines a previous
 // block left behind, so "Update info" never duplicates anything. Whatever else
@@ -88,10 +88,10 @@ function withInfo(current: string, row: AdminSubmissionRow, hours: number): stri
   return rest ? `${block}\n\n${rest}` : block;
 }
 
-// Keeps the Hours / Deflated by lines in step with the Hours box.
+// Keeps the Deflated by / Total hours lines in step with the Hours box.
 function syncHoursLines(text: string, row: AdminSubmissionRow, hours: number): string {
   return text
-    .replace(/^Hours:.*$/m, `Hours: ${round1(hours)}`)
+    .replace(/^Total hours:.*$/m, `Total hours: ${round1(hours)}`)
     .replace(/^Deflated by:.*$/m, `Deflated by: ${round1(Math.max(0, row.hours - hours))}`);
 }
 

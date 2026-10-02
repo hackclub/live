@@ -31,3 +31,6 @@ next-env.d.ts
 *.env.*
 
 
+pnpm-lock.yaml
+.gitignore
+pnpm-workspace.yaml
