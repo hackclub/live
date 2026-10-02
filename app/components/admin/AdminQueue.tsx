@@ -61,18 +61,26 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 
 // Hours/deflation lines are derived from the row's hours at load vs. the
 // current value in the Hours box.
+const lapseList = (links: string) =>
+  links
+    .split(",")
+    .map((link) => link.trim())
+    .filter(Boolean)
+    .join(", ");
+
 function infoBlock(row: AdminSubmissionRow, hours: number): string {
   const parts = [
     row.codeUrl.trim() && `Code URL: ${row.codeUrl.trim()}`,
     row.playableUrl.trim() && `demo: ${row.playableUrl.trim()}`,
     row.hackatimeProjects.trim() && `Project: ${row.hackatimeProjects.trim()}`,
     row.hackatimeId.trim() && `Hackatime ID: ${row.hackatimeId.trim()}`,
+    lapseList(row.lapseLinks) && `Lapse: ${lapseList(row.lapseLinks)}`,
     `Hours: ${round1(row.hours)}\nDeflated by: ${round1(Math.max(0, row.hours - hours))}\nTotal hours: ${round1(hours)}`,
   ];
   return parts.filter(Boolean).join("\n\n");
 }
 
-const INFO_LINE = /^(Code URL|demo|Project|Hackatime ID|Hours|Deflated by|Total hours):/i;
+const INFO_LINE = /^(Code URL|demo|Project|Hackatime ID|Lapse|Hours|Deflated by|Total hours):/i;
 
 // Puts a fresh info block at the top, first dropping any lines a previous
 // block left behind, so "Update info" never duplicates anything. Whatever else
