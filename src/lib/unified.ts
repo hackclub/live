@@ -8,12 +8,16 @@ export type UnifiedShip = {
   program: string;
   hours: number;
   approvedAt: string;
+  // Hrefs in the result row (code/playable/etc.), used to match a submission.
+  links: string[];
+  // True when this ship's URLs or repo are the submission being reviewed.
+  sameProject: boolean;
 };
 
 export type UnifiedInfo =
   | { status: "unavailable" }
   | { status: "none" }
-  | { status: "found"; ships: UnifiedShip[]; totalHours: number; searchUrl: string };
+  | { status: "found"; ships: UnifiedShip[]; totalHours: number; searchUrl: string; matches: number };
 
 const CACHE_TTL_MS = 10 * 60_000;
 const REQUEST_TIMEOUT_MS = 8_000;
@@ -53,9 +57,40 @@ function parseShips(html: string): UnifiedShip[] {
       program: cells[1],
       hours: Number(cells[3]) || 0,
       approvedAt: cells[6],
+      links: [...row.matchAll(/href="([^"]+)"/g)].map((m) => decodeEntities(m[1])),
+      sameProject: false,
     });
   }
   return ships;
+}
+
+function normalizeUrl(url: string): string {
+  return url
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\.git$/, "")
+    .replace(/\/+$/, "");
+}
+
+// "https://github.com/Owner/Repo/tree/main" -> "owner/repo"; Unified lists a
+// ship's user column as that repo path.
+function repoPath(url: string): string | null {
+  const m = /^github\.com\/([^/]+)\/([^/?#]+)/.exec(normalizeUrl(url));
+  return m ? `${m[1]}/${m[2]}`.replace(/\.git$/, "") : null;
+}
+
+// Flags ships that are this exact submission (same code/playable URL or repo),
+// so a project resubmitted under another program stands out.
+function markSameProject(ships: UnifiedShip[], urls: string[]): void {
+  const normalized = new Set(urls.map(normalizeUrl));
+  const repos = new Set(urls.map(repoPath).filter((r): r is string => r !== null));
+  for (const ship of ships) {
+    ship.sameProject =
+      repos.has(ship.user.trim().toLowerCase()) ||
+      ship.links.some((link) => normalized.has(normalizeUrl(link)) || repos.has(repoPath(link) ?? ""));
+  }
 }
 
 export function unifiedSearchUrl(query: string): string | null {
@@ -94,16 +129,28 @@ async function lookupOne(urls: string[]): Promise<UnifiedInfo> {
   if (results.every((r) => r === null)) return { status: "unavailable" };
 
   // The same ship can match both URLs, and genuine repeat ships can look
-  // identical, so don't merge — take the URL that matched the most ships.
-  let best = 0;
-  results.forEach((r, i) => {
-    if ((r?.length ?? 0) > (results[best]?.length ?? 0)) best = i;
+  // identical, so don't merge — take the URL whose ships include the most
+  // exact matches for this submission, then the one that matched the most ships.
+  // Ships are shared via the lookup cache, so mark copies, not the originals.
+  const candidates = results.map((r, i) => {
+    const ships = (r ?? []).map((ship) => ({ ...ship }));
+    markSameProject(ships, urls);
+    return { ships, url: urls[i], matches: ships.filter((ship) => ship.sameProject).length };
   });
-  const ships = results[best] ?? [];
+  const bestCandidate = candidates.reduce((a, b) =>
+    b.matches > a.matches || (b.matches === a.matches && b.ships.length > a.ships.length) ? b : a,
+  );
+  const { ships, matches } = bestCandidate;
   if (ships.length === 0) return { status: "none" };
 
   const totalHours = Math.round(ships.reduce((sum, s) => sum + s.hours, 0) * 10) / 10;
-  return { status: "found", ships, totalHours, searchUrl: unifiedSearchUrl(urls[best]) ?? "" };
+  return {
+    status: "found",
+    ships,
+    totalHours,
+    searchUrl: unifiedSearchUrl(bestCandidate.url) ?? "",
+    matches,
+  };
 }
 
 // Looks up many records at once with bounded concurrency, keyed by record id.

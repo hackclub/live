@@ -542,10 +542,15 @@ function UnifiedStatus({ recordId }: { recordId: string }) {
   if (!info) return <p className="text-xs opacity-50">Checking Unified…</p>;
   if (info.status === "none") return <p className="text-xs opacity-60">Unified: not submitted</p>;
   if (info.status === "unavailable") return <p className="text-xs opacity-60">Unified: lookup unavailable</p>;
+  const duplicate = info.matches > 0;
   return (
-    <div className="alert alert-info py-2 text-sm flex-col items-start gap-1">
+    <div className={`alert ${duplicate ? "alert-warning" : "alert-info"} py-2 text-sm flex-col items-start gap-1`}>
       <span>
-        ✅ Submitted to Unified — {info.ships.length} ship{info.ships.length === 1 ? "" : "s"}, {info.totalHours}h total
+        {duplicate
+          ? `⚠ Already in Unified — ${info.matches} ship${info.matches === 1 ? "" : "s"} match this code/playable URL`
+          : "Unified has ships from this search, but none match this submission's code/playable URL"}
+        {" · "}
+        {info.ships.length} ship{info.ships.length === 1 ? "" : "s"}, {info.totalHours}h total
         {info.searchUrl && (
           <>
             {" "}
@@ -557,7 +562,8 @@ function UnifiedStatus({ recordId }: { recordId: string }) {
       </span>
       <ul className="opacity-80 list-disc pl-5">
         {info.ships.map((ship, i) => (
-          <li key={i}>
+          <li key={i} className={ship.sameProject ? "font-bold opacity-100" : ""}>
+            {ship.sameProject && "⚠ SAME PROJECT · "}
             {ship.user} · {ship.program} · {ship.hours}h · {ship.approvedAt}
           </li>
         ))}
