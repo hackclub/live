@@ -31,3 +31,17 @@ export function matchesSearch(
     .toLowerCase();
   return terms.every((term) => haystack.includes(term));
 }
+
+// The queue's full-table scan is its slowest step, so hold it longer than the
+// default GET cache — writes (every review action) still invalidate it.
+export const QUEUE_CACHE_TTL_MS = 60_000;
+
+// Rows rendered per page; "Load more" raises ?limit= by this much.
+export const QUEUE_PAGE_SIZE = 25;
+const QUEUE_MAX_LIMIT = 1000;
+
+export function parseLimit(value: string | undefined): number {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n < QUEUE_PAGE_SIZE) return QUEUE_PAGE_SIZE;
+  return Math.min(n, QUEUE_MAX_LIMIT);
+}

@@ -5,14 +5,12 @@ import { getIdentity } from "../../src/lib/hackclub";
 import {
   BANNED_USER_FIELDS,
   listBannedUsers,
-  listMessagesBySubmissionIds,
   listSubmissions,
   SUBMISSION_FIELDS,
   SUBMISSION_QUEUE_FIELDS,
 } from "../../src/lib/airtable";
-import { matchesSearch, normalizeQuery } from "../../src/lib/submissionSearch";
+import { matchesSearch, normalizeQuery, parseLimit, QUEUE_CACHE_TTL_MS } from "../../src/lib/submissionSearch";
 import { telescreenLink } from "../../src/lib/telescreen";
-import { lookupUnifiedForRecords } from "../../src/lib/unified";
 import AdminQueue, { type AdminSubmissionRow } from "../components/admin/AdminQueue";
 
 
@@ -52,7 +50,7 @@ function matchesStatus(fields: Record<string, unknown>, status: Status): boolean
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; limit?: string }>;
 }) {
   const session = await getSession();
   if (!session?.access_token) redirect("/api/auth/login");
@@ -65,12 +63,13 @@ export default async function AdminPage({
   const params = await searchParams;
   const status = parseStatus(params.status);
   const query = normalizeQuery(params.q);
+  const limit = parseLimit(params.limit);
 
   // One full-table scan serves both the active status tab and the
   // cross-status duplicate/stats view below — these used to be two separate
   // Airtable queries (one filtered, one not) every single page load.
   const [allRecords, bannedUserRecords] = await Promise.all([
-    listSubmissions(undefined, SUBMISSION_QUEUE_FIELDS),
+    listSubmissions(undefined, SUBMISSION_QUEUE_FIELDS, QUEUE_CACHE_TTL_MS),
     listBannedUsers(),
   ]);
   // A search spans every status; otherwise show the active tab.
@@ -78,17 +77,6 @@ export default async function AdminPage({
     query ? matchesSearch(record, query) : matchesStatus(record.fields, status),
   );
 
-  const messagesBySubmission = await listMessagesBySubmissionIds(records.map((r) => r.id));
-  // Whether each displayed project has already been shipped to Unified.
-  const unifiedByRecord = await lookupUnifiedForRecords(
-    records.map((r) => ({
-      id: r.id,
-      urls: [
-        String(r.fields[SUBMISSION_FIELDS.playableUrl] ?? ""),
-        String(r.fields[SUBMISSION_FIELDS.codeUrl] ?? ""),
-      ],
-    })),
-  );
 
   // Server-side only: banned emails are never attached to AdminSubmissionRow,
   // only reduced to a per-record `isBanned` boolean below.
@@ -146,7 +134,7 @@ export default async function AdminPage({
   const remainingToReview = queueCount - reviewedTotal;
   const percentApproved = reviewedTotal === 0 ? null : Math.round((approvedProjects / reviewedTotal) * 1000) / 10;
 
-  const rows: AdminSubmissionRow[] = records.map((record) => {
+  const rows: AdminSubmissionRow[] = records.slice(0, limit).map((record) => {
     const codeUrl = String(record.fields[SUBMISSION_FIELDS.codeUrl] ?? "").trim();
     const group = codeUrl ? groupsByCodeUrl.get(normalizeCodeUrl(codeUrl)) ?? [] : [];
     const others = group.filter((r) => r.id !== record.id);
@@ -181,11 +169,9 @@ export default async function AdminPage({
       screenshotUrl: screenshot?.[0]?.url ?? null,
       approved: Boolean(record.fields[SUBMISSION_FIELDS.approved]),
       reviewStatus: String(record.fields[SUBMISSION_FIELDS.reviewStatus] ?? "Pending"),
-      messages: messagesBySubmission.get(record.id) ?? [],
       duplicateRecordIds,
       duplicateHasApproved,
       isBanned,
-      unified: unifiedByRecord.get(record.id),
       reviewerVerdict: reviewerVerdictRaw === "Approve" || reviewerVerdictRaw === "Reject" ? reviewerVerdictRaw : null,
       reviewerJustification: String(record.fields[SUBMISSION_FIELDS.reviewerJustification] ?? ""),
       reviewerHours: typeof reviewerHoursRaw === "number" ? reviewerHoursRaw : null,
@@ -255,7 +241,15 @@ export default async function AdminPage({
           <div className="stat-desc">{Math.round(fraudHours * 10) / 10} hrs</div>
         </div>
       </div>
-      <AdminQueue rows={rows} filter={status} query={query} isAdmin />
+      <AdminQueue
+        rows={rows}
+        filter={status}
+        query={query}
+        limit={limit}
+        hasMore={records.length > limit}
+        total={records.length}
+        isAdmin
+      />
     </section>
   );
 }

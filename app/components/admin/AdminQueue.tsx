@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MessageThread, { type ThreadMessage } from "../dashboard/MessageThread";
 import type { UnifiedInfo } from "../../../src/lib/unified";
+import { QUEUE_PAGE_SIZE } from "../../../src/lib/submissionSearch";
 
 export type AdminSubmissionRow = {
   id: string;
@@ -17,12 +18,9 @@ export type AdminSubmissionRow = {
   screenshotUrl: string | null;
   approved: boolean;
   reviewStatus: string;
-  messages: ThreadMessage[];
   duplicateRecordIds: string[];
   duplicateHasApproved: boolean;
   isBanned: boolean;
-  // Whether this project was already shipped to Hack Club Unified.
-  unified?: UnifiedInfo;
   // Reviewer precheck — set once a reviewer has recorded a non-terminal
   // verdict; never implies Approved/Review Status have changed.
   reviewerVerdict?: "Approve" | "Reject" | null;
@@ -38,6 +36,9 @@ export default function AdminQueue({
   rows,
   filter,
   query = "",
+  limit,
+  hasMore,
+  total,
   tabs = FILTERS,
   showTelescreenLink = true,
   isAdmin = false,
@@ -49,6 +50,10 @@ export default function AdminQueue({
   filter: Filter;
   // Active search (spans every status when non-empty).
   query?: string;
+  // Rows shown so far / whether more exist / total matches — drives Load more.
+  limit: number;
+  hasMore: boolean;
+  total: number;
   tabs?: readonly Filter[];
   showTelescreenLink?: boolean;
   // Ban is a permanent, program-wide action — unlike Approve/Reject/Fraud,
@@ -153,7 +158,7 @@ export default function AdminQueue({
 
       {query && (
         <p className="text-sm opacity-70">
-          {rows.length} result{rows.length === 1 ? "" : "s"} for “{query}” across all statuses
+          {total} result{total === 1 ? "" : "s"} for “{query}” across all statuses
         </p>
       )}
 
@@ -172,33 +177,11 @@ export default function AdminQueue({
         const precheckReady = hoursValid && justificationValue.trim().length > 0;
 
         return (
-        <div key={row.id} className="card bg-base-200 p-4 gap-3">
+        <div key={row.id} id={row.id} className="card bg-base-200 p-4 gap-3">
           {row.isBanned && (
             <div className="alert alert-error py-2 text-sm">⛔ (banned user)</div>
           )}
-          {row.unified?.status === "found" && (
-            <div className="alert alert-info py-2 text-sm flex-col items-start gap-1">
-              <span>
-                ✅ Submitted to Unified — {row.unified.ships.length} ship{row.unified.ships.length === 1 ? "" : "s"},{" "}
-                {row.unified.totalHours}h total
-                {row.unified.searchUrl && (
-                  <>
-                    {" "}
-                    <a className="link" href={row.unified.searchUrl} target="_blank" rel="noreferrer">
-                      view
-                    </a>
-                  </>
-                )}
-              </span>
-              <ul className="opacity-80 list-disc pl-5">
-                {row.unified.ships.map((ship, i) => (
-                  <li key={i}>
-                    {ship.user} · {ship.program} · {ship.hours}h · {ship.approvedAt}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <UnifiedStatus recordId={row.id} />
           {row.duplicateRecordIds.length > 0 && (
             <div className="alert alert-warning py-2 text-sm">
               {row.duplicateHasApproved
@@ -251,14 +234,6 @@ export default function AdminQueue({
               {row.hackatimeProjects && <p>Project: {row.hackatimeProjects}</p>}
               {row.hackatimeId && <p>Hackatime ID: {row.hackatimeId}</p>}
               {row.description && <p className="max-w-md whitespace-pre-wrap">Description: {row.description}</p>}
-              <p className="opacity-70">
-                Unified:{" "}
-                {row.unified?.status === "found"
-                  ? `Submitted (${row.unified.ships.length} ship${row.unified.ships.length === 1 ? "" : "s"}, ${row.unified.totalHours}h)`
-                  : row.unified?.status === "none"
-                    ? "Not submitted"
-                    : "Lookup unavailable"}
-              </p>
               <p className="opacity-60">
                 {row.approved ? "Approved" : row.reviewStatus}
               </p>
@@ -406,15 +381,103 @@ export default function AdminQueue({
           </div>
           )}
 
-          <details>
-            <summary className="cursor-pointer text-sm opacity-70">Messages</summary>
-            <div className="pt-2">
-              <MessageThread messages={row.messages} />
-            </div>
-          </details>
+          <MessagesSection recordId={row.id} />
         </div>
         );
       })}
+
+      {hasMore && (
+        <a
+          href={`${basePath}?${new URLSearchParams({
+            ...(query ? { q: query } : { status: filter }),
+            limit: String(limit + QUEUE_PAGE_SIZE),
+          }).toString()}#${rows[rows.length - 1]?.id ?? ""}`}
+          className="btn btn-outline self-center"
+        >
+          Load more ({rows.length} of {total})
+        </a>
+      )}
     </div>
+  );
+}
+
+function UnifiedStatus({ recordId }: { recordId: string }) {
+  const [info, setInfo] = useState<UnifiedInfo | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/admin/unified?id=${encodeURIComponent(recordId)}`)
+      .then((res) => (res.ok ? res.json() : { status: "unavailable" }))
+      .catch(() => ({ status: "unavailable" }))
+      .then((data) => {
+        if (!cancelled) setInfo(data as UnifiedInfo);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [recordId]);
+
+  if (!info) return <p className="text-xs opacity-50">Checking Unified…</p>;
+  if (info.status === "none") return <p className="text-xs opacity-60">Unified: not submitted</p>;
+  if (info.status === "unavailable") return <p className="text-xs opacity-60">Unified: lookup unavailable</p>;
+  return (
+    <div className="alert alert-info py-2 text-sm flex-col items-start gap-1">
+      <span>
+        ✅ Submitted to Unified — {info.ships.length} ship{info.ships.length === 1 ? "" : "s"}, {info.totalHours}h total
+        {info.searchUrl && (
+          <>
+            {" "}
+            <a className="link" href={info.searchUrl} target="_blank" rel="noreferrer">
+              view
+            </a>
+          </>
+        )}
+      </span>
+      <ul className="opacity-80 list-disc pl-5">
+        {info.ships.map((ship, i) => (
+          <li key={i}>
+            {ship.user} · {ship.program} · {ship.hours}h · {ship.approvedAt}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// Fetched the first time the section is opened, not with the page.
+function MessagesSection({ recordId }: { recordId: string }) {
+  const [opened, setOpened] = useState(false);
+  const [messages, setMessages] = useState<ThreadMessage[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!opened) return;
+    let cancelled = false;
+    fetch(`/api/admin/messages?id=${encodeURIComponent(recordId)}`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("failed"))))
+      .then((data) => {
+        if (!cancelled) setMessages(data.messages as ThreadMessage[]);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [opened, recordId]);
+
+  return (
+    <details onToggle={(e) => e.currentTarget.open && setOpened(true)}>
+      <summary className="cursor-pointer text-sm opacity-70">Messages</summary>
+      <div className="pt-2">
+        {failed ? (
+          <p className="text-sm opacity-60">Couldn’t load messages.</p>
+        ) : messages ? (
+          <MessageThread messages={messages} />
+        ) : (
+          <p className="text-sm opacity-60">Loading…</p>
+        )}
+      </div>
+    </details>
   );
 }

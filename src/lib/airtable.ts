@@ -159,7 +159,9 @@ function messagesTableConfig() {
   if (!apiKey || !baseId || !tableName) {
     throw new Error("Airtable messages env vars are not configured");
   }
-  return { apiKey, baseId, tableName };
+  // Writes invalidate the table's cache, so a longer window is safe — and the
+  // queue now only scans messages lazily when a row's thread is opened.
+  return { apiKey, baseId, tableName, cacheTtlMs: 60_000 };
 }
 
 function redemptionsTableConfig() {
@@ -562,8 +564,13 @@ export async function getTokenBalance(email: string): Promise<number> {
 export async function listSubmissions(
   filterByFormula?: string,
   fields?: string[],
+  // Overrides the default 10s GET-cache window for this scan. Writes still
+  // invalidate the whole table, so a longer window only trades staleness from
+  // *other* instances' edits — the queue's full scan is the slowest thing on
+  // the admin/review pages, so it's worth holding onto.
+  cacheTtlMs?: number,
 ): Promise<AirtableRecord[]> {
-  const config = submissionTableConfig();
+  const config = { ...submissionTableConfig(), cacheTtlMs };
   const records: AirtableRecord[] = [];
   let offset: string | undefined;
   do {

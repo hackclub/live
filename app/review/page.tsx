@@ -5,13 +5,11 @@ import { getIdentity } from "../../src/lib/hackclub";
 import {
   BANNED_USER_FIELDS,
   listBannedUsers,
-  listMessagesBySubmissionIds,
   listSubmissions,
   SUBMISSION_FIELDS,
   SUBMISSION_QUEUE_FIELDS,
 } from "../../src/lib/airtable";
-import { matchesSearch, normalizeQuery } from "../../src/lib/submissionSearch";
-import { lookupUnifiedForRecords } from "../../src/lib/unified";
+import { matchesSearch, normalizeQuery, parseLimit, QUEUE_CACHE_TTL_MS } from "../../src/lib/submissionSearch";
 import AdminQueue, { type AdminSubmissionRow } from "../components/admin/AdminQueue";
 
 // Reviewer-scoped variant of /admin — same queue-building logic as
@@ -61,7 +59,7 @@ function matchesStatus(fields: Record<string, unknown>, status: ReviewStatus): b
 export default async function ReviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; limit?: string }>;
 }) {
   const session = await getSession();
   if (!session?.access_token) redirect("/api/auth/login");
@@ -75,12 +73,13 @@ export default async function ReviewPage({
   const params = await searchParams;
   const status = parseStatus(params.status);
   const query = normalizeQuery(params.q);
+  const limit = parseLimit(params.limit);
 
   // One full-table scan serves both the active status tab and the
   // cross-status duplicate/stats view below (and, via the shared
   // SUBMISSION_QUEUE_FIELDS cache key, an /admin load's identical scan).
   const [allRecords, bannedUserRecords] = await Promise.all([
-    listSubmissions(undefined, SUBMISSION_QUEUE_FIELDS),
+    listSubmissions(undefined, SUBMISSION_QUEUE_FIELDS, QUEUE_CACHE_TTL_MS),
     // Banned emails stay server-side and are reduced to a boolean below.
     listBannedUsers(),
   ]);
@@ -93,17 +92,6 @@ export default async function ReviewPage({
     (record) => String(record.fields[SUBMISSION_FIELDS.email] ?? "").trim().toLowerCase() !== email.toLowerCase(),
   );
 
-  const messagesBySubmission = await listMessagesBySubmissionIds(records.map((r) => r.id));
-  // Whether each displayed project has already been shipped to Unified.
-  const unifiedByRecord = await lookupUnifiedForRecords(
-    records.map((r) => ({
-      id: r.id,
-      urls: [
-        String(r.fields[SUBMISSION_FIELDS.playableUrl] ?? ""),
-        String(r.fields[SUBMISSION_FIELDS.codeUrl] ?? ""),
-      ],
-    })),
-  );
   const bannedEmails = new Set(
     bannedUserRecords.map((r) => String(r.fields[BANNED_USER_FIELDS.email] ?? "").trim().toLowerCase()).filter(Boolean),
   );
@@ -133,7 +121,7 @@ export default async function ReviewPage({
   }
   const queueCount = allRecords.length;
 
-  const rows: AdminSubmissionRow[] = records.map((record) => {
+  const rows: AdminSubmissionRow[] = records.slice(0, limit).map((record) => {
     const codeUrl = String(record.fields[SUBMISSION_FIELDS.codeUrl] ?? "").trim();
     const group = codeUrl ? groupsByCodeUrl.get(normalizeCodeUrl(codeUrl)) ?? [] : [];
     const others = group.filter((r) => r.id !== record.id);
@@ -167,11 +155,9 @@ export default async function ReviewPage({
       screenshotUrl: screenshot?.[0]?.url ?? null,
       approved: Boolean(record.fields[SUBMISSION_FIELDS.approved]),
       reviewStatus: String(record.fields[SUBMISSION_FIELDS.reviewStatus] ?? "Pending"),
-      messages: messagesBySubmission.get(record.id) ?? [],
       duplicateRecordIds,
       duplicateHasApproved,
       isBanned,
-      unified: unifiedByRecord.get(record.id),
     };
   }
 
@@ -198,6 +184,9 @@ export default async function ReviewPage({
         rows={rows}
         filter={status}
         query={query}
+        hasMore={records.length > limit}
+        limit={limit}
+        total={records.length}
         tabs={["Pending", "Approved", "Rejected", "Fraud"]}
         showTelescreenLink={false}
         isAdmin={isAdminEmail(email)}
