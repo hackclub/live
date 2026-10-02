@@ -11,6 +11,7 @@ import {
   SUBMISSION_QUEUE_FIELDS,
 } from "../../src/lib/airtable";
 import { matchesSearch, normalizeQuery } from "../../src/lib/submissionSearch";
+import { lookupUnifiedForRecords } from "../../src/lib/unified";
 import AdminQueue, { type AdminSubmissionRow } from "../components/admin/AdminQueue";
 
 const TELESCREEN_BASE = "https://telescreen.hackclub.com/workbench/hackatime/overview";
@@ -79,6 +80,16 @@ export default async function AdminPage({
   );
 
   const messagesBySubmission = await listMessagesBySubmissionIds(records.map((r) => r.id));
+  // Whether each displayed project has already been shipped to Unified.
+  const unifiedByRecord = await lookupUnifiedForRecords(
+    records.map((r) => ({
+      id: r.id,
+      urls: [
+        String(r.fields[SUBMISSION_FIELDS.playableUrl] ?? ""),
+        String(r.fields[SUBMISSION_FIELDS.codeUrl] ?? ""),
+      ],
+    })),
+  );
 
   // Server-side only: banned emails are never attached to AdminSubmissionRow,
   // only reduced to a per-record `isBanned` boolean below.
@@ -175,6 +186,7 @@ export default async function AdminPage({
       duplicateRecordIds,
       duplicateHasApproved,
       isBanned,
+      unified: unifiedByRecord.get(record.id),
       reviewerVerdict: reviewerVerdictRaw === "Approve" || reviewerVerdictRaw === "Reject" ? reviewerVerdictRaw : null,
       reviewerJustification: String(record.fields[SUBMISSION_FIELDS.reviewerJustification] ?? ""),
       reviewerHours: typeof reviewerHoursRaw === "number" ? reviewerHoursRaw : null,

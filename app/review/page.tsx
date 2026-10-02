@@ -11,6 +11,7 @@ import {
   SUBMISSION_QUEUE_FIELDS,
 } from "../../src/lib/airtable";
 import { matchesSearch, normalizeQuery } from "../../src/lib/submissionSearch";
+import { lookupUnifiedForRecords } from "../../src/lib/unified";
 import AdminQueue, { type AdminSubmissionRow } from "../components/admin/AdminQueue";
 
 // Reviewer-scoped variant of /admin — same queue-building logic as
@@ -93,6 +94,16 @@ export default async function ReviewPage({
   );
 
   const messagesBySubmission = await listMessagesBySubmissionIds(records.map((r) => r.id));
+  // Whether each displayed project has already been shipped to Unified.
+  const unifiedByRecord = await lookupUnifiedForRecords(
+    records.map((r) => ({
+      id: r.id,
+      urls: [
+        String(r.fields[SUBMISSION_FIELDS.playableUrl] ?? ""),
+        String(r.fields[SUBMISSION_FIELDS.codeUrl] ?? ""),
+      ],
+    })),
+  );
   const bannedEmails = new Set(
     bannedUserRecords.map((r) => String(r.fields[BANNED_USER_FIELDS.email] ?? "").trim().toLowerCase()).filter(Boolean),
   );
@@ -160,6 +171,7 @@ export default async function ReviewPage({
       duplicateRecordIds,
       duplicateHasApproved,
       isBanned,
+      unified: unifiedByRecord.get(record.id),
     };
   }
 

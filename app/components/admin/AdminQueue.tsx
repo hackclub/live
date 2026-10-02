@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import MessageThread, { type ThreadMessage } from "../dashboard/MessageThread";
+import type { UnifiedInfo } from "../../../src/lib/unified";
 
 export type AdminSubmissionRow = {
   id: string;
@@ -20,6 +21,8 @@ export type AdminSubmissionRow = {
   duplicateRecordIds: string[];
   duplicateHasApproved: boolean;
   isBanned: boolean;
+  // Whether this project was already shipped to Hack Club Unified.
+  unified?: UnifiedInfo;
   // Reviewer precheck — set once a reviewer has recorded a non-terminal
   // verdict; never implies Approved/Review Status have changed.
   reviewerVerdict?: "Approve" | "Reject" | null;
@@ -173,6 +176,29 @@ export default function AdminQueue({
           {row.isBanned && (
             <div className="alert alert-error py-2 text-sm">⛔ (banned user)</div>
           )}
+          {row.unified?.status === "found" && (
+            <div className="alert alert-info py-2 text-sm flex-col items-start gap-1">
+              <span>
+                ✅ Submitted to Unified — {row.unified.ships.length} ship{row.unified.ships.length === 1 ? "" : "s"},{" "}
+                {row.unified.totalHours}h total
+                {row.unified.searchUrl && (
+                  <>
+                    {" "}
+                    <a className="link" href={row.unified.searchUrl} target="_blank" rel="noreferrer">
+                      view
+                    </a>
+                  </>
+                )}
+              </span>
+              <ul className="opacity-80 list-disc pl-5">
+                {row.unified.ships.map((ship, i) => (
+                  <li key={i}>
+                    {ship.user} · {ship.program} · {ship.hours}h · {ship.approvedAt}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {row.duplicateRecordIds.length > 0 && (
             <div className="alert alert-warning py-2 text-sm">
               {row.duplicateHasApproved
@@ -225,6 +251,14 @@ export default function AdminQueue({
               {row.hackatimeProjects && <p>Project: {row.hackatimeProjects}</p>}
               {row.hackatimeId && <p>Hackatime ID: {row.hackatimeId}</p>}
               {row.description && <p className="max-w-md whitespace-pre-wrap">Description: {row.description}</p>}
+              <p className="opacity-70">
+                Unified:{" "}
+                {row.unified?.status === "found"
+                  ? `Submitted (${row.unified.ships.length} ship${row.unified.ships.length === 1 ? "" : "s"}, ${row.unified.totalHours}h)`
+                  : row.unified?.status === "none"
+                    ? "Not submitted"
+                    : "Lookup unavailable"}
+              </p>
               <p className="opacity-60">
                 {row.approved ? "Approved" : row.reviewStatus}
               </p>
