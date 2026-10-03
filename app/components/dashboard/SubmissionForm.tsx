@@ -148,7 +148,7 @@ export default function SubmissionForm({
 
       {track === "software" && (
         <div>
-          <label className="label">Lapse Link(s) (comma-separated)</label>
+          <label className="label">Lapse Link(s) (separate with commas)</label>
           <input name="lapseLinks" className="input input-bordered w-full" defaultValue={defaults?.lapseLinks} />
         </div>
       )}

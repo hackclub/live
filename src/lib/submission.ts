@@ -36,9 +36,15 @@ function isHttpUrl(value: string): boolean {
   }
 }
 
+// Links may be separated by commas and/or whitespace; older submissions were
+// saved space-separated with no commas.
+export function splitLinks(value: string): string[] {
+  return value.split(/[\s,]+/).filter(Boolean);
+}
+
 function allHttpUrls(value: string): boolean {
-  const parts = value.split(",").map((part) => part.trim());
-  return parts.every((part) => part.length > 0 && isHttpUrl(part));
+  const parts = splitLinks(value);
+  return parts.length > 0 && parts.every(isHttpUrl);
 }
 
 export function validateSubmissionInput(input: Partial<SubmissionInput>): SubmissionFieldErrors {
@@ -62,7 +68,7 @@ export function validateSubmissionInput(input: Partial<SubmissionInput>): Submis
     if (!input.lapseLinks || !input.lapseLinks.trim()) {
       errors.lapseLinks = "Lapse Link is required for hardware submissions";
     } else if (!allHttpUrls(input.lapseLinks)) {
-      errors.lapseLinks = "Enter comma-separated http(s) links";
+      errors.lapseLinks = "Enter http(s) links separated by commas or spaces";
     }
     const hours = Number(input.hardwareHours);
     if (!input.hardwareHours || Number.isNaN(hours) || hours <= 0) {
@@ -73,7 +79,7 @@ export function validateSubmissionInput(input: Partial<SubmissionInput>): Submis
       errors.hackatimeProject = "Select the Hackatime project this submission tracks hours under";
     }
     if (input.lapseLinks?.trim() && !allHttpUrls(input.lapseLinks)) {
-      errors.lapseLinks = "Enter comma-separated http(s) links";
+      errors.lapseLinks = "Enter http(s) links separated by commas or spaces";
     }
   }
 

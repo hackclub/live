@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import MessageThread, { type ThreadMessage } from "../dashboard/MessageThread";
 import type { UnifiedInfo } from "../../../src/lib/unified";
 import { QUEUE_PAGE_SIZE } from "../../../src/lib/submissionSearch";
+import { splitLinks } from "../../../src/lib/submission";
 
 export type AdminSubmissionRow = {
   id: string;
@@ -62,11 +63,7 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 // Hours/deflation lines are derived from the row's hours at load vs. the
 // current value in the Hours box.
 const lapseList = (links: string) =>
-  links
-    .split(",")
-    .map((link) => link.trim())
-    .filter(Boolean)
-    .join(", ");
+  splitLinks(links).join(", ");
 
 function infoBlock(row: AdminSubmissionRow, hours: number): string {
   const parts = [
@@ -377,10 +374,7 @@ export default function AdminQueue({
               {row.lapseLinks && (
                 <p>
                   Lapse:{" "}
-                  {row.lapseLinks
-                    .split(",")
-                    .map((link) => link.trim())
-                    .filter(Boolean)
+                  {splitLinks(row.lapseLinks)
                     .map((link, i) => (
                       <a key={i} className="link mr-2" href={link} target="_blank" rel="noreferrer">
                         {link}
