@@ -37,9 +37,10 @@ function isHttpUrl(value: string): boolean {
 }
 
 // Links may be separated by commas and/or whitespace; older submissions were
-// saved space-separated with no commas.
+// saved space-separated with no commas, and some were pasted back to back with
+// no separator at all, so a new http(s):// also starts a new link.
 export function splitLinks(value: string): string[] {
-  return value.split(/[\s,]+/).filter(Boolean);
+  return value.split(/[\s,]+|(?<=\S)(?=https?:\/\/)/).filter(Boolean);
 }
 
 function allHttpUrls(value: string): boolean {
