@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import type { ShopItem } from "../../src/lib/shopItems";
 
@@ -16,7 +16,13 @@ export default function RedeemCatalog({
   const [error, setError] = useState<string | null>(null);
   const [openItem, setOpenItem] = useState<string | null>(null);
 
+  // A ref (not the `pending` state) so a second click in the same tick, before
+  // React re-renders, is still rejected.
+  const inFlight = useRef(false);
+
   async function redeem(item: ShopItem) {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setPending(item.name);
     setError(null);
     try {
@@ -30,12 +36,18 @@ export default function RedeemCatalog({
         setError(
           data.error === "insufficient_balance"
             ? `Not enough tokens for ${item.name}.`
-            : "Redemption failed. Try again.",
+            : data.error === "duplicate_request"
+              ? `Looks like ${item.name} was just redeemed — wait a few seconds if you meant to buy another.`
+              : "Redemption failed. Try again.",
         );
+        if (typeof data.balance === "number") setBalance(data.balance);
         return;
       }
       setBalance(data.balance);
+    } catch {
+      setError("Network error. Check your balance before trying again.");
     } finally {
+      inFlight.current = false;
       setPending(null);
     }
   }
@@ -79,7 +91,7 @@ export default function RedeemCatalog({
                       </button>
                       <button
                         className="btn btn-secondary w-full mt-2"
-                        disabled={!canAfford || pending === item.name}
+                        disabled={!canAfford || pending !== null}
                         onClick={() => redeem(item)}
                       >
                         {pending === item.name ? "Redeeming..." : "Redeem"}

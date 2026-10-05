@@ -9,7 +9,8 @@ import {
   REDEMPTION_FIELDS,
   REFERRAL_FIELDS,
 } from "../../../src/lib/airtable";
-import PurchasesTable, { type PurchaseRow } from "../../components/admin/PurchasesTable";
+import RefundAllPanel from "../../components/admin/RefundAllPanel";
+import PurchasesTable,{ type PurchaseRow } from "../../components/admin/PurchasesTable";
 
 export default async function AdminPurchasesPage() {
   const session = await getSession();
@@ -88,6 +89,7 @@ export default async function AdminPurchasesPage() {
           <div className="stat-value">{Math.round(totalHoursSpent * 10) / 10}</div>
         </div>
       </div>
+      <RefundAllPanel />
       <PurchasesTable rows={rows} />
     </section>
   );

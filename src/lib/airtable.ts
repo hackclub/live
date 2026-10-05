@@ -562,6 +562,70 @@ export async function getTokenBalance(email: string): Promise<number> {
   return earned - spent;
 }
 
+// Uncached read of everything the purchase check needs. The 10s in-process
+// GET cache is per server instance, so on a multi-instance deploy it can
+// hide another instance's just-created redemption — that's how two
+// concurrent buys both saw enough balance. Purchases must never read through
+// it (cacheTtlMs: 0 => the cache entry is born expired).
+//
+// `redemptions` are the person's rows oldest-first (createdTime, then id) —
+// a total order every concurrent request agrees on, which is what lets
+// each purchase decide independently whether it was the one that overdrew.
+export async function getFreshPurchaseState(email: string): Promise<{
+  earned: number;
+  redemptions: AirtableRecord[];
+}> {
+  const escaped = email.replace(/'/g, "\\'");
+
+  const submissionConfig = { ...submissionTableConfig(), cacheTtlMs: 0 };
+  const submissionParams = new URLSearchParams();
+  submissionParams.set(
+    "filterByFormula",
+    `AND(LOWER({${SUBMISSION_FIELDS.email}}) = LOWER('${escaped}'), {${SUBMISSION_FIELDS.approved}} = TRUE())`,
+  );
+  submissionParams.append("fields[]", SUBMISSION_FIELDS.overrideHours);
+  submissionParams.set("pageSize", "100");
+  let earned = 0;
+  let submissionOffset: string | undefined;
+  do {
+    if (submissionOffset) submissionParams.set("offset", submissionOffset);
+    // No try/catch on purpose (unlike getPersonalApprovedHours): if we can't
+    // verify hours, the purchase must fail rather than guess.
+    const data = await airtableRequest<{ records: AirtableRecord[]; offset?: string }>(
+      submissionConfig,
+      `?${submissionParams.toString()}`,
+    );
+    for (const record of data.records) {
+      const hours = record.fields[SUBMISSION_FIELDS.overrideHours];
+      if (typeof hours === "number" && Number.isFinite(hours)) earned += hours;
+    }
+    submissionOffset = data.offset;
+  } while (submissionOffset);
+
+  const redemptionConfig = { ...redemptionsTableConfig(), cacheTtlMs: 0 };
+  const redemptions: AirtableRecord[] = [];
+  let redemptionOffset: string | undefined;
+  do {
+    const params = new URLSearchParams();
+    params.set("filterByFormula", `LOWER({${REDEMPTION_FIELDS.email}}) = LOWER('${escaped}')`);
+    params.set("pageSize", "100");
+    if (redemptionOffset) params.set("offset", redemptionOffset);
+    const data = await airtableRequest<{ records: AirtableRecord[]; offset?: string }>(
+      redemptionConfig,
+      `?${params.toString()}`,
+    );
+    redemptions.push(...data.records);
+    redemptionOffset = data.offset;
+  } while (redemptionOffset);
+  redemptions.sort(
+    (a, b) =>
+      new Date(a.createdTime ?? 0).getTime() - new Date(b.createdTime ?? 0).getTime() ||
+      a.id.localeCompare(b.id),
+  );
+
+  return { earned, redemptions };
+}
+
 // Pages through the full result set via Airtable's `offset` token — a
 // single request silently caps at 100 records, which was truncating the
 // admin queue and every stat tile computed from it once the table grew

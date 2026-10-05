@@ -34,3 +34,6 @@ next-env.d.ts
 pnpm-lock.yaml
 .gitignore
 pnpm-workspace.yaml
+
+# redemption backups (contain emails)
+backups/
