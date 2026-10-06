@@ -5,6 +5,7 @@ import { FaTwitch } from "react-icons/fa";
 import Link from "next/link";
 import Footer from "./components/Footer";
 import { useObsTimer } from "./hooks/useObsTimer";
+import { SUBMISSIONS_OPEN } from "../src/lib/siteStatus";
 const TWITCH_CHANNEL = "plastuchino";
 
 // Banked stream time (initial + approved-hours + admin adjustment) rendered as
@@ -82,7 +83,27 @@ export default function Home() {
 
               <div className="flex flex-col items-center justify-center min-h-screen w-screen bg-base-300">
 
-            {prelaunch ? (
+            {!SUBMISSIONS_OPEN ? (
+
+            <div className="flex flex-col items-center gap-8 w-5/6 mx-auto text-center py-20">
+
+                <p className="font-1 text-lg px-3 py-1 bg-primary text-primary-content font-bold">submissions are closed</p>
+
+                <h1 className="font-2 text-7xl">the stream is <u>over</u></h1>
+
+                <div className="font-2 flex flex-col gap-2 max-w-2xl">
+                    <p className="text-2xl">thanks to everyone who shipped. you kept the stream going.</p>
+                    <p className="text-lg opacity-80">we&apos;re not accepting new projects anymore, but you can still check your submissions and spend your tokens in the shop.</p>
+                </div>
+
+                <div className="flex flex-row flex-wrap items-center justify-center gap-6">
+                    <Link href="/redeem" prefetch={false} className="btn btn-primary btn-outline btn-xl font-2">spend your tokens</Link>
+                    <Link href="/dashboard" prefetch={false} className="btn btn-secondary btn-ghost btn-xl font-2">your dashboard</Link>
+                </div>
+
+            </div>
+
+            ) : prelaunch ? (
 
             <div className="flex flex-col items-center gap-10 w-5/6 mx-auto text-center py-20">
 
@@ -185,7 +206,7 @@ export default function Home() {
         </section>
 
         <section className="min-h-[50vh] w-4/6 mx-auto p-5">
-            <p className="font-2 my-10 text-3xl">Here&apos;s how it works</p>
+            <p className="font-2 my-10 text-3xl">Here&apos;s how it worked</p>
 
             <div className="grid grid-cols-2 gap-y-3 mt-2">
                 <div className="bg-base-300 p-4 col-span-2 justify-self-start rounded-box">
@@ -227,8 +248,8 @@ export default function Home() {
             <div className="w-4/6 mx-auto flex flex-col gap-2 font-2">
             <div className="collapse bg-base-100 border border-base-300 ">
   <input type="radio" name="my-accordion-1" defaultChecked />
-  <div className="collapse-title font-semibold">Who can submit projects</div>
-  <div className="collapse-content text-sm">Anyone who&apos;s 13-18.</div>
+  <div className="collapse-title font-semibold">Who could submit projects</div>
+  <div className="collapse-content text-sm">Anyone who&apos;s 13-18. Submissions are now closed.</div>
 </div>
 <div className="collapse bg-base-100 border border-base-300">
   <input type="radio" name="my-accordion-1" />

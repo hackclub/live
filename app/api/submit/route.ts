@@ -20,11 +20,16 @@ import {
 import { getHackatimeMe, getHackatimeProjects, trackedHoursForProject } from "../../../src/lib/hackatime";
 import { validateSubmissionInput, type SubmissionInput } from "../../../src/lib/submission";
 import { isEmailBanned } from "../../../src/lib/bans";
+import { SUBMISSIONS_OPEN } from "../../../src/lib/siteStatus";
 
 const MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024;
 const SCREENSHOT_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
 export async function POST(request: Request) {
+  if (!SUBMISSIONS_OPEN) {
+    return NextResponse.json({ error: "submissions_closed" }, { status: 403 });
+  }
+
   const session = await getSessionFromRequest(request);
   if (!session?.access_token || !session.hackatime_access_token) {
     return NextResponse.json({ error: "not_authenticated" }, { status: 401 });

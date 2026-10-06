@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import SubmissionForm from "./SubmissionForm";
+import { SUBMISSIONS_OPEN } from "../../../src/lib/siteStatus";
 import MessageThread, { type ThreadMessage } from "./MessageThread";
 
 export type OwnSubmission = {
@@ -68,7 +69,7 @@ export default function SubmissionsList({
           
             </div>
 
-            {(!s.approved) && (
+            {SUBMISSIONS_OPEN && !s.approved && (
               <button className="btn btn-sm" onClick={() => setEditing(editing === s.id ? null : s.id)}>
               {editing === s.id ? "Close" : "Fix & resubmit"}
             </button>
@@ -77,7 +78,7 @@ export default function SubmissionsList({
    
           </div>
 
-          {editing === s.id && (
+          {SUBMISSIONS_OPEN && editing === s.id && (
             <div className="pt-2">
               <SubmissionForm
                 githubUsername={githubUsername}

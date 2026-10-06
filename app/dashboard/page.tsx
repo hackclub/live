@@ -25,6 +25,7 @@ import SubmissionForm from "../components/dashboard/SubmissionForm";
 import SubmissionsList, { type OwnSubmission } from "../components/dashboard/SubmissionsList";
 import PurchasedPrizes, { type Redemption } from "../components/dashboard/PurchasedPrizes";
 import ReferralPanel from "../components/dashboard/ReferralPanel";
+import { SUBMISSIONS_OPEN } from "../../src/lib/siteStatus";
 
 export default async function DashboardPage() {
   // Redirects to /api/auth/login or /api/auth/hackatime/login if either
@@ -134,7 +135,7 @@ export default async function DashboardPage() {
             howdy <span className="text-primary text-3xl">{identity.first_name ?? "person!"}</span>
           </p>
           <p className="font-1 pt-5 text-lg">
-            this is da place where you can submit to increase the stream length (and receive cool prizes)
+            this is da place where you can see your submissions and spend your tokens on cool prizes
           </p>
 
           <p className="py-5 font-2">
@@ -189,8 +190,16 @@ export default async function DashboardPage() {
         </section>
 
         <section className="mx-auto flex flex-col gap-4">
-          <p className="text-2xl font-2">submit a new project</p>
-          {identityComplete ? (
+          <p className="text-2xl font-2">{SUBMISSIONS_OPEN ? "submit a new project" : "submissions are closed"}</p>
+          {!SUBMISSIONS_OPEN ? (
+            <div className="bg-base-200 border border-primary p-4 font-2 flex flex-col gap-2 max-w-xl">
+              <p className="font-bold">the stream is over — thanks for shipping!</p>
+              <p className="text-sm">
+                we&apos;re not taking new submissions or resubmissions anymore. you can still
+                spend your tokens in the <Link className="link text-blue-500" href="/redeem" prefetch={false}>shop</Link>.
+              </p>
+            </div>
+          ) : identityComplete ? (
             <SubmissionForm
               githubUsername={hackatimeMe?.github_username ?? ""}
               hackatimeProjects={projectOptions}
