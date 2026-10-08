@@ -37,6 +37,7 @@ const allShopItems: ShopItem[] = [
   { name: "$20 AI Grant", price: 3, img:"/prizes/ai_grant.png", description: "for all your ai needs..."},
   { name: "Four Key Macropad", price: 4, img: "/prizes/macropad_image.jpg", description: "little macropad you can actually use" },
   { name: "$70 MX Master 3S Grant", price: 12, img: "/prizes/mouse.png", description: "$70 for mx master 3s" },
+  { name: "$85 mini computer setup Grant", ptice: 13, description: "$85 for cheap RPI desktop keyboard and monitor"},
   // ===== 17 HOURS =====
   { name: "YubiKey 5C NFC", price: 20, img: "/prizes/yubikey.jpg", description: "secure your shi" },
 
