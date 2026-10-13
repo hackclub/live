@@ -56,6 +56,7 @@ export function toProjectView(
     playableUrl: String(record.fields[SUBMISSION_FIELDS.playableUrl] ?? ""),
     inUnified: Boolean(match),
     unifiedUrl: match ? unifiedRecordUrl(match.id) : null,
+    justification: match?.justification || null,
   };
 }
 

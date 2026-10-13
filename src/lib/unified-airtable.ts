@@ -17,6 +17,7 @@ const UNIFIED_FIELDS = {
   codeUrl: "Code URL",
   playableUrl: "Playable URL",
   approvedAt: "Approved At",
+  justification: "Override Hours Spent Justification",
 } as const;
 
 export type UnifiedProject = {
@@ -26,6 +27,7 @@ export type UnifiedProject = {
   codeUrl: string;
   playableUrl: string;
   approvedAt: string;
+  justification: string;
 };
 
 function unifiedConfig() {
@@ -119,6 +121,7 @@ async function fetchLiveUnifiedProjects(): Promise<UnifiedProject[] | null> {
         codeUrl: String(record.fields[UNIFIED_FIELDS.codeUrl] ?? ""),
         playableUrl: String(record.fields[UNIFIED_FIELDS.playableUrl] ?? ""),
         approvedAt: String(record.fields[UNIFIED_FIELDS.approvedAt] ?? ""),
+        justification: String(record.fields[UNIFIED_FIELDS.justification] ?? "").trim(),
       };
     });
 }

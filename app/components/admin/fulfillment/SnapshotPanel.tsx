@@ -28,6 +28,16 @@ export function ProjectLinks({ project }: { project: ProjectView }) {
   );
 }
 
+export function Justification({ project }: { project: ProjectView }) {
+  if (!project.justification) return null;
+  return (
+    <details className="w-full text-xs">
+      <summary className="cursor-pointer opacity-70">justification</summary>
+      <p className="whitespace-pre-wrap opacity-80 mt-1 pl-3 border-l border-base-300">{project.justification}</p>
+    </details>
+  );
+}
+
 export function UnifiedBadge({ inUnified }: { inUnified: boolean }) {
   return inUnified ? (
     <span className="badge badge-sm badge-success">in Unified</span>
@@ -88,6 +98,7 @@ export default function SnapshotPanel({ redemptionId }: { redemptionId: string }
               <ProjectLinks project={s} />
             </span>
             <span className="font-mono">{hrs(s.hours)}</span>
+            <Justification project={s} />
           </li>
         ))}
       </ul>

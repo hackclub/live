@@ -30,6 +30,7 @@ export type ProjectView = {
   playableUrl: string;
   inUnified: boolean;
   unifiedUrl: string | null;
+  justification: string | null; // the hours justification as written in Unified
 };
 
 export type UserInput = {

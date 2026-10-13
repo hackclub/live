@@ -3,7 +3,7 @@
 import { Fragment, useState } from "react";
 import type { ItemLine, SpendStatus, UserView } from "../../../../src/lib/fulfillment";
 import { displayName, hrs, projectLabel, usd, userAnchor } from "./format";
-import SnapshotPanel, { ProjectLinks, UnifiedBadge } from "./SnapshotPanel";
+import SnapshotPanel, { Justification, ProjectLinks, UnifiedBadge } from "./SnapshotPanel";
 
 const STATUS_BADGE: Record<SpendStatus, string> = {
   EXPLOIT: "badge-error",
@@ -150,6 +150,7 @@ export default function UserCard({
                       <ProjectLinks project={p} />
                     </span>
                     <span className="font-mono">{hrs(p.hours)}</span>
+                    <Justification project={p} />
                   </li>
                 ))}
               </ul>
