@@ -6,8 +6,9 @@ import {
   getRedemptionById,
   listApprovedSubmissionsBeforeForEmail,
   REDEMPTION_FIELDS,
-  SUBMISSION_FIELDS,
 } from "../../../../../src/lib/airtable";
+import { indexUnifiedByCodeUrl, toProjectView } from "../../../../../src/lib/fulfillment-data";
+import { listLiveUnifiedProjects } from "../../../../../src/lib/unified-airtable";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -49,13 +50,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ submissions: [], totalHours: 0 });
   }
 
-  const records = await listApprovedSubmissionsBeforeForEmail(email, redeemedAt);
-  const submissions = records.map((record) => ({
-    id: record.id,
-    project: String(record.fields[SUBMISSION_FIELDS.hackatimeProjects] ?? ""),
-    hours: Number(record.fields[SUBMISSION_FIELDS.overrideHours] ?? 0),
-  }));
+  const [records, unified] = await Promise.all([
+    listApprovedSubmissionsBeforeForEmail(email, redeemedAt),
+    listLiveUnifiedProjects(),
+  ]);
+  // Unified unavailable -> every project reads as not-in-Unified, no link.
+  const unifiedByCodeUrl = indexUnifiedByCodeUrl(unified);
+  const submissions = records.map((record) => toProjectView(record, unifiedByCodeUrl));
   const totalHours = submissions.reduce((sum, s) => sum + s.hours, 0);
 
-  return NextResponse.json({ submissions, totalHours });
+  return NextResponse.json({ submissions, totalHours, unifiedAvailable: unified !== null });
 }

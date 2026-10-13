@@ -90,6 +90,10 @@ export const REDEMPTION_FIELDS = {
   itemName: "Item Name",
   cost: "Cost",
   redeemedAt: "Redeemed At",
+  // Fulfillment — a redemption is fulfilled exactly when Fulfilled At is set.
+  // The table's Status select is unused; don't write it.
+  fulfilledAt: "Fulfilled At",
+  fulfilledBy: "Fulfilled By",
 } as const;
 
 // Key/value "Stream Config" table — see tasks.md 1.1. One row per setting.
@@ -433,7 +437,12 @@ export async function listApprovedSubmissionsBeforeForEmail(
     `AND({${SUBMISSION_FIELDS.email}} = '${escaped}', {${SUBMISSION_FIELDS.approved}} = TRUE(), IS_BEFORE(CREATED_TIME(), '${safeBefore}'))`,
   );
   // Only what's needed to render a snapshot row — no address/birthday/email.
-  for (const field of [SUBMISSION_FIELDS.hackatimeProjects, SUBMISSION_FIELDS.overrideHours]) {
+  for (const field of [
+    SUBMISSION_FIELDS.hackatimeProjects,
+    SUBMISSION_FIELDS.overrideHours,
+    SUBMISSION_FIELDS.codeUrl,
+    SUBMISSION_FIELDS.playableUrl,
+  ]) {
     params.append("fields[]", field);
   }
   const data = await airtableRequest<{ records: AirtableRecord[] }>(config, `?${params.toString()}`);
@@ -526,6 +535,62 @@ export async function getRedemptionById(recordId: string): Promise<AirtableRecor
   } catch {
     return null;
   }
+}
+
+// Airtable record ids are "rec" + 14 alphanumerics. Checked before an id is
+// interpolated into a formula, since ids reaching here are client-supplied.
+export function isAirtableRecordId(value: unknown): value is string {
+  return typeof value === "string" && /^rec[A-Za-z0-9]{14}$/.test(value);
+}
+
+// Bulk lookup for the fulfill route, chunked so the OR() formula keeps the
+// URL short. Ids that don't exist are simply absent from the result.
+export async function getRedemptionsByIds(ids: string[]): Promise<AirtableRecord[]> {
+  const config = redemptionsTableConfig();
+  const valid = ids.filter(isAirtableRecordId);
+  const records: AirtableRecord[] = [];
+  for (let i = 0; i < valid.length; i += 50) {
+    const chunk = valid.slice(i, i + 50);
+    let offset: string | undefined;
+    do {
+      const params = new URLSearchParams();
+      params.set("filterByFormula", `OR(${chunk.map((id) => `RECORD_ID() = '${id}'`).join(", ")})`);
+      params.set("pageSize", "100");
+      if (offset) params.set("offset", offset);
+      const data = await airtableRequest<{ records: AirtableRecord[]; offset?: string }>(
+        config,
+        `?${params.toString()}`,
+      );
+      records.push(...data.records);
+      offset = data.offset;
+    } while (offset);
+  }
+  return records;
+}
+
+// Batch PATCH for Redemptions, 10 records per request (Airtable's cap). A
+// failed chunk doesn't stop later ones — the caller gets exactly which ids
+// were written, so the UI never shows an unconfirmed change.
+export async function updateRedemptionRecords(
+  updates: { id: string; fields: Record<string, unknown> }[],
+): Promise<{ updated: string[]; failed: string[] }> {
+  const config = redemptionsTableConfig();
+  const updated: string[] = [];
+  const failed: string[] = [];
+  for (let i = 0; i < updates.length; i += 10) {
+    const chunk = updates.slice(i, i + 10);
+    try {
+      const data = await airtableRequest<{ records: AirtableRecord[] }>(config, "", {
+        method: "PATCH",
+        body: JSON.stringify({ records: chunk, typecast: false }),
+      });
+      updated.push(...data.records.map((record) => record.id));
+    } catch (err) {
+      console.error("[updateRedemptionRecords] chunk failed", err);
+      failed.push(...chunk.map((update) => update.id));
+    }
+  }
+  return { updated, failed };
 }
 
 export async function createRedemption({
